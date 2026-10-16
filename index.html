@@ -218,6 +218,7 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
     left.appendChild(form);
     var right = h('div', { class: 'card' }, [h('h2', { text: cfg.title }), h('div', { class: 'tw' }, [h('table', { id: 'tbl-' + m })])]);
     pane.appendChild(h('div', { class: 'split' }, [left, right]));
+    resetForm(m);
   }
   function resetForm(m, form) {
     var cfg = MODS[m];
