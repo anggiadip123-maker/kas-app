@@ -141,6 +141,7 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
     },
     ap: {
       title: 'Faktur hutang', fields: [
+        { k: 'po_id', l: 'Ambil dari PO (otomatis isi supplier dan jumlah)', t: 'select', opts: [['', 'Input manual']], def: '' },
         { k: 'no', l: 'No. faktur', t: 'text', req: 1 }, { k: 'pihak', l: 'Supplier', t: 'text', req: 1 },
         { k: 'tgl', l: 'Tanggal faktur', t: 'date', req: 1, def: TODAY }, { k: 'jatuh_tempo', l: 'Jatuh tempo', t: 'date', req: 1 },
         { k: 'jumlah', l: 'Jumlah (Rp)', t: 'number', req: 1 }, { k: 'dibayar', l: 'Sudah dibayar (Rp)', t: 'number', def: 0 }],
@@ -200,6 +201,7 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
     form.appendChild(fieldsBox);
     form.appendChild(h('div', { class: 'btns' }, [save, cancel]));
     cancel.addEventListener('click', function () { editing[m] = null; resetForm(m); render(); });
+    if (m === 'ap') fieldsBox.querySelector('#f-ap-po_id').addEventListener('change', function () { fromPO(this.value); });
     form.addEventListener('submit', function (ev) { ev.preventDefault(); submit(m); });
     resetForm(m, form);
 
@@ -230,8 +232,30 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
     var c = document.getElementById('cancel-' + m); if (c) c.hidden = true;
     var s = document.getElementById('save-' + m); if (s) s.textContent = 'Simpan';
   }
+  // PO yang belum punya faktur hutang (atau yang sedang diubah) bisa dipilih di form hutang.
+  function poLinked(exceptApId) {
+    var s = {}; data.ap.forEach(function (a) { if (a.po_id && a.id !== exceptApId) s[a.po_id] = a; });
+    return s;
+  }
+  function refreshPoSelect() {
+    var sel = document.getElementById('f-ap-po_id'); if (!sel) return;
+    var cur = sel.value, linked = poLinked(editing.ap);
+    sel.textContent = '';
+    sel.appendChild(h('option', { value: '', text: 'Input manual' }));
+    data.po.filter(function (p) { return !linked[p.id] && p.status !== 'Menunggu Persetujuan'; })
+      .sort(MODS.po.sort).forEach(function (p) { sel.appendChild(h('option', { value: p.id, text: p.no + ' · ' + p.supplier + ' · ' + rp(p.nilai) })); });
+    sel.value = cur;
+    if (sel.value !== cur) sel.value = '';
+  }
+  function fromPO(id) {
+    var p = data.po.filter(function (x) { return x.id === id; })[0]; if (!p) return;
+    document.getElementById('f-ap-pihak').value = p.supplier || '';
+    document.getElementById('f-ap-jumlah').value = p.nilai || 0;
+    var no = document.getElementById('f-ap-no'); if (!no.value) no.value = 'FK-' + p.no;
+  }
   function startEdit(m, row) {
     editing[m] = row.id;
+    if (m === 'ap') refreshPoSelect();
     MODS[m].fields.forEach(function (f) { document.getElementById('f-' + m + '-' + f.k).value = row[f.k] != null ? row[f.k] : ''; });
     $('#ft-' + m).textContent = 'Ubah data';
     $('#cancel-' + m).hidden = false;
@@ -295,7 +319,7 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
   function tdNode(node) { return h('td', {}, [node]); }
 
   function renderPO() {
-    fillTable('po', [['No. PO'], ['Tanggal'], ['Supplier'], ['Barang'], ['Nilai', 1], ['Tiba'], ['Status']], function (r) {
+    fillTable('po', [['No. PO'], ['Tanggal'], ['Supplier'], ['Barang'], ['Nilai', 1], ['Tiba'], ['Status'], ['Faktur hutang']], function (r) {
       var tr = h('tr');
       tr.appendChild(td(r.no)); tr.appendChild(td(tgl(r.tanggal))); tr.appendChild(td(r.supplier)); tr.appendChild(td(r.item));
       tr.appendChild(td(rp(r.nilai), 1));
@@ -306,7 +330,21 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
       sel.disabled = !canWrite;
       sel.addEventListener('change', function () { if (db) db.doc('po/' + r.id).update({ status: sel.value }).catch(fail); });
       var cell = h('td', {}, [sel]); if (late) { cell.appendChild(document.createTextNode(' ')); cell.appendChild(pill('bad', 'Lewat ETA')); }
-      tr.appendChild(cell); tr.appendChild(actions('po', r)); return tr;
+      tr.appendChild(cell);
+      var fk = poLinked()[r.id], fcell = h('td');
+      if (fk) fcell.appendChild(pill('ok', fk.no));
+      else if (r.status === 'Menunggu Persetujuan') fcell.appendChild(pill('mute', 'Belum disetujui'));
+      else {
+        var fb = h('button', { class: 'btn sm', type: 'button', text: 'Buat faktur' });
+        fb.disabled = !canWrite;
+        fb.addEventListener('click', function () {
+          editing.ap = null; resetForm('ap'); active = 'ap'; showTab();
+          refreshPoSelect(); document.getElementById('f-ap-po_id').value = r.id; fromPO(r.id);
+          document.getElementById('f-ap-jatuh_tempo').focus();
+        });
+        fcell.appendChild(fb);
+      }
+      tr.appendChild(fcell); tr.appendChild(actions('po', r)); return tr;
     });
   }
   function renderKas() {
@@ -319,6 +357,7 @@ svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
   }
   function renderOpenItems(m) {
     var pk = MODS[m].paidKey, lab = m === 'ap' ? 'Dibayar' : 'Diterima';
+    if (m === 'ap') refreshPoSelect();
     fillTable(m, [['No.'], [MODS[m].who], ['Jatuh tempo'], ['Jumlah', 1], [lab, 1], ['Sisa', 1], ['Status']], function (r) {
       var tr = h('tr'), sisa = (+r.jumlah || 0) - (+r[pk] || 0), u = umur(r.jatuh_tempo);
       tr.appendChild(td(r.no)); tr.appendChild(td(r.pihak)); tr.appendChild(td(tgl(r.jatuh_tempo)));
