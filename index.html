@@ -1,0 +1,482 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>Kas Purchasing AP AR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: ringkasan angka di atas, tab per fungsi, tiap tab berisi form input di samping tabel */
+:root{
+  --bg:#f5f6f3;--surface:#ffffff;--ink:#16201d;--muted:#5b6964;--line:#dde3df;
+  --accent:#0f6b5c;--accent-ink:#ffffff;--soft:#e8f1ee;
+  --ok:#1b7a4a;--warn:#a9510a;--bad:#b3261e;--out:#c9792b;
+  --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1513;--surface:#172019;--ink:#e6ece9;--muted:#93a39c;--line:#27322c;
+  --accent:#4fc3a8;--accent-ink:#07251e;--soft:#1c2c26;
+  --ok:#5fcf93;--warn:#e39a4d;--bad:#f08a80;--out:#e39a4d;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513;--surface:#172019;--ink:#e6ece9;--muted:#93a39c;--line:#27322c;
+  --accent:#4fc3a8;--accent-ink:#07251e;--soft:#1c2c26;
+  --ok:#5fcf93;--warn:#e39a4d;--bad:#f08a80;--out:#e39a4d;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:600;margin:0}
+.sub{color:var(--muted);margin:2px 0 0}
+.banner{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink)}
+.banner[hidden]{display:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.kpi .l{color:var(--muted);font-size:12px}
+.kpi .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.kpi .n{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi.bad .v{color:var(--bad)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{font:inherit;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pane[hidden]{display:none}
+.split{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card+.card{margin-top:16px}
+form{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:500}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 9px;width:100%;min-width:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.danger.arm{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled,input:disabled,select:disabled{opacity:.5;cursor:not-allowed}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+td.num,th.num{text-align:right}
+td.act{text-align:right}
+td.act .btn{margin-left:4px}
+tr.edit td{background:var(--soft)}
+.empty{color:var(--muted);padding:18px 8px;white-space:normal}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}.pill.mute{color:var(--muted)}
+.bars{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.bar{display:grid;grid-template-columns:128px minmax(0,1fr) 108px;gap:8px;align-items:center;font-size:12px}
+.bar .t{height:12px;background:var(--soft);border-radius:6px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.bar.late .t i{background:var(--bad)}
+.bar .x{text-align:right;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.grid2 .card+.card{margin-top:0}
+.legend{display:flex;gap:14px;color:var(--muted);font-size:12px;margin-top:6px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--accent)}
+.legend i.o{background:var(--out)}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--muted);font-family:var(--font);font-size:11px}
+.note{font-size:12px;color:var(--muted)}
+</style>
+<div class="wrap">
+  <div>
+    <h1>Kas, Purchasing, Hutang &amp; Piutang</h1>
+    <p class="sub">Input dari tab masing-masing. Data tersimpan di browser ini.</p><div class="btns" style="margin-top:8px"><button type="button" class="btn pri" id="xl-out">Ekspor ke Excel</button><button type="button" class="btn" id="bk-out">Unduh cadangan</button><label class="btn" style="flex-direction:row;cursor:pointer">Pulihkan cadangan<input type="file" id="bk-in" accept="application/json" hidden></label></div>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <div class="pane" id="pane-ring">
+    <div class="grid2">
+      <div class="card"><h2>Umur hutang</h2><div class="note">Sisa hutang menurut keterlambatan</div><div class="bars" id="aging-ap"></div></div>
+      <div class="card"><h2>Umur piutang</h2><div class="note">Sisa tagihan menurut keterlambatan</div><div class="bars" id="aging-ar"></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>Arus kas 14 hari terakhir</h2><div class="legend"><span><i></i>Penerimaan</span><span><i class="o"></i>Pengeluaran</span></div><div id="cashchart"></div></div>
+  </div>
+  <div class="pane" id="pane-po" hidden></div>
+  <div class="pane" id="pane-kas" hidden></div>
+  <div class="pane" id="pane-ap" hidden></div>
+  <div class="pane" id="pane-ar" hidden></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var fmt = new Intl.NumberFormat('id-ID');
+  var rp = function (v) { return (v < 0 ? '-Rp ' : 'Rp ') + fmt.format(Math.abs(Math.round(+v || 0))); };
+  var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  var tgl = function (s) { if (!s) return '—'; var p = String(s).split('-'); return +p[2] + ' ' + BLN[+p[1] - 1] + ' ' + p[0]; };
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var isoOf = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var TODAY = isoOf(new Date());
+  var dayNum = function (iso) { var p = iso.split('-'); return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); };
+  var umur = function (jt) { return jt ? dayNum(TODAY) - dayNum(jt) : 0; };
+
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'class') e.className = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+
+  var STATUS_PO = ['Menunggu Persetujuan', 'Dipesan', 'Diterima Sebagian', 'Diterima'];
+  var MODS = {
+    po: {
+      title: 'Purchase order', fields: [
+        { k: 'no', l: 'No. PO', t: 'text', req: 1 }, { k: 'tanggal', l: 'Tanggal', t: 'date', req: 1, def: TODAY },
+        { k: 'supplier', l: 'Supplier', t: 'text', req: 1 }, { k: 'item', l: 'Barang / jasa', t: 'text', req: 1 },
+        { k: 'nilai', l: 'Nilai (Rp)', t: 'number', req: 1 }, { k: 'eta', l: 'Perkiraan tiba', t: 'date' },
+        { k: 'status', l: 'Status', t: 'select', opts: STATUS_PO.map(function (s) { return [s, s]; }), def: 'Menunggu Persetujuan' }],
+      sort: function (a, b) { return (b.tanggal || '').localeCompare(a.tanggal || ''); }
+    },
+    kas: {
+      title: 'Transaksi kas', fields: [
+        { k: 'tanggal', l: 'Tanggal', t: 'date', req: 1, def: TODAY },
+        { k: 'jenis', l: 'Jenis', t: 'select', opts: [['masuk', 'Penerimaan'], ['keluar', 'Pengeluaran']], def: 'masuk' },
+        { k: 'keterangan', l: 'Keterangan', t: 'text', req: 1 }, { k: 'jumlah', l: 'Jumlah (Rp)', t: 'number', req: 1 }],
+      sort: function (a, b) { return (b.tanggal || '').localeCompare(a.tanggal || ''); }
+    },
+    ap: {
+      title: 'Faktur hutang', fields: [
+        { k: 'no', l: 'No. faktur', t: 'text', req: 1 }, { k: 'pihak', l: 'Supplier', t: 'text', req: 1 },
+        { k: 'tgl', l: 'Tanggal faktur', t: 'date', req: 1, def: TODAY }, { k: 'jatuh_tempo', l: 'Jatuh tempo', t: 'date', req: 1 },
+        { k: 'jumlah', l: 'Jumlah (Rp)', t: 'number', req: 1 }, { k: 'dibayar', l: 'Sudah dibayar (Rp)', t: 'number', def: 0 }],
+      sort: function (a, b) { return (+(a.dibayar >= a.jumlah) - +(b.dibayar >= b.jumlah)) || (a.jatuh_tempo || '').localeCompare(b.jatuh_tempo || ''); },
+      paidKey: 'dibayar', who: 'Supplier'
+    },
+    ar: {
+      title: 'Tagihan piutang', fields: [
+        { k: 'no', l: 'No. faktur', t: 'text', req: 1 }, { k: 'pihak', l: 'Pelanggan', t: 'text', req: 1 },
+        { k: 'tgl', l: 'Tanggal faktur', t: 'date', req: 1, def: TODAY }, { k: 'jatuh_tempo', l: 'Jatuh tempo', t: 'date', req: 1 },
+        { k: 'jumlah', l: 'Jumlah (Rp)', t: 'number', req: 1 }, { k: 'diterima', l: 'Sudah diterima (Rp)', t: 'number', def: 0 }],
+      sort: function (a, b) { return (+(a.diterima >= a.jumlah) - +(b.diterima >= b.jumlah)) || (a.jatuh_tempo || '').localeCompare(b.jatuh_tempo || ''); },
+      paidKey: 'diterima', who: 'Pelanggan'
+    }
+  };
+  var data = { po: [], kas: [], ap: [], ar: [] };
+  var settings = { saldo_awal: 0 };
+  var editing = { po: null, kas: null, ap: null, ar: null };
+  var db = null, canWrite = true, active = 'ring';
+
+  var TABS = [['ring', 'Ringkasan'], ['po', 'Purchasing'], ['kas', 'General Cashier'], ['ap', 'Account Payable'], ['ar', 'Account Receivable']];
+  var tabsEl = $('#tabs');
+  TABS.forEach(function (t) {
+    var b = h('button', { role: 'tab', 'data-t': t[0], id: 'tab-' + t[0], text: t[1], 'aria-selected': t[0] === active ? 'true' : 'false' });
+    b.addEventListener('click', function () { active = t[0]; showTab(); });
+    tabsEl.appendChild(b);
+  });
+  function showTab() {
+    TABS.forEach(function (t) {
+      $('#tab-' + t[0]).setAttribute('aria-selected', t[0] === active ? 'true' : 'false');
+      $('#pane-' + t[0]).hidden = t[0] !== active;
+    });
+    render();
+  }
+
+  function note(msg) { var b = $('#banner'); b.textContent = msg; b.hidden = !msg; }
+
+  // ---- form + table skeleton for each module
+  function buildPane(m) {
+    var cfg = MODS[m], pane = $('#pane-' + m);
+    var form = h('form', { id: 'form-' + m, autocomplete: 'off' });
+    var fieldsBox = h('div', { class: 'row2', style: 'grid-template-columns:1fr' });
+    cfg.fields.forEach(function (f) {
+      var inp;
+      if (f.t === 'select') {
+        inp = h('select', { id: 'f-' + m + '-' + f.k });
+        f.opts.forEach(function (o) { inp.appendChild(h('option', { value: o[0], text: o[1] })); });
+      } else {
+        inp = h('input', { id: 'f-' + m + '-' + f.k, type: f.t });
+        if (f.t === 'number') { inp.setAttribute('min', '0'); inp.setAttribute('step', '1'); inp.setAttribute('inputmode', 'numeric'); }
+      }
+      if (f.req) inp.required = true;
+      fieldsBox.appendChild(h('label', { text: f.l, for: 'f-' + m + '-' + f.k }, [inp]));
+    });
+    var save = h('button', { type: 'submit', class: 'btn pri', id: 'save-' + m, text: 'Simpan' });
+    var cancel = h('button', { type: 'button', class: 'btn', id: 'cancel-' + m, text: 'Batal', hidden: '' });
+    form.appendChild(fieldsBox);
+    form.appendChild(h('div', { class: 'btns' }, [save, cancel]));
+    cancel.addEventListener('click', function () { editing[m] = null; resetForm(m); render(); });
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); submit(m); });
+    resetForm(m, form);
+
+    var left = h('div', { class: 'card' }, [h('h2', { id: 'ft-' + m, text: 'Tambah data' })]);
+    if (m === 'kas') {
+      left.appendChild(h('div', { class: 'note', text: 'Saldo awal (sebelum transaksi di bawah)' }));
+      var sa = h('input', { id: 'saldo-awal', type: 'number', min: '0', step: '1', inputmode: 'numeric', 'aria-label': 'Saldo awal kas' });
+      var sb = h('button', { type: 'button', class: 'btn', id: 'saldo-save', text: 'Simpan saldo awal' });
+      sb.addEventListener('click', function () {
+        if (!db) return;
+        db.doc('settings/kas').set({ saldo_awal: Number(sa.value) || 0 }).catch(fail);
+      });
+      left.appendChild(h('div', { class: 'btns', style: 'margin-top:6px' }, [sa, sb]));
+      left.appendChild(h('hr', { style: 'border:0;border-top:1px solid var(--line);margin:14px 0 0' }));
+    }
+    left.appendChild(form);
+    var right = h('div', { class: 'card' }, [h('h2', { text: cfg.title }), h('div', { class: 'tw' }, [h('table', { id: 'tbl-' + m })])]);
+    pane.appendChild(h('div', { class: 'split' }, [left, right]));
+  }
+  function resetForm(m, form) {
+    var cfg = MODS[m];
+    cfg.fields.forEach(function (f) {
+      var el = document.getElementById('f-' + m + '-' + f.k);
+      if (el) el.value = f.def != null ? f.def : '';
+    });
+    var t = document.getElementById('ft-' + m); if (t) t.textContent = 'Tambah data';
+    var c = document.getElementById('cancel-' + m); if (c) c.hidden = true;
+    var s = document.getElementById('save-' + m); if (s) s.textContent = 'Simpan';
+  }
+  function startEdit(m, row) {
+    editing[m] = row.id;
+    MODS[m].fields.forEach(function (f) { document.getElementById('f-' + m + '-' + f.k).value = row[f.k] != null ? row[f.k] : ''; });
+    $('#ft-' + m).textContent = 'Ubah data';
+    $('#cancel-' + m).hidden = false;
+    $('#save-' + m).textContent = 'Simpan perubahan';
+    document.getElementById('f-' + m + '-' + MODS[m].fields[0].k).focus();
+    render();
+  }
+  function fail(e) {
+    var c = e && e.code;
+    note(c === 'invalid_argument' ? 'Anda tidak punya izin mengubah data. Minta akses Contributor atau Editor dari pemilik link.'
+      : c === 'quota_exceeded' ? 'Penyimpanan penuh. Hapus beberapa data lama.' : 'Gagal menyimpan. Coba lagi sebentar lagi.');
+  }
+  function submit(m) {
+    if (!db) return;
+    var obj = {};
+    MODS[m].fields.forEach(function (f) {
+      var v = document.getElementById('f-' + m + '-' + f.k).value;
+      obj[f.k] = f.t === 'number' ? (Number(v) || 0) : v;
+    });
+    var ref = editing[m] ? db.doc(m + '/' + editing[m]) : db.collection(m).doc();
+    var btn = $('#save-' + m); btn.disabled = true;
+    ref.set(obj).then(function () { note(''); editing[m] = null; resetForm(m); }).catch(fail).then(function () { btn.disabled = !canWrite; });
+  }
+  function remove(m, id) { if (db) db.doc(m + '/' + id).delete().catch(fail); }
+
+  // ---- tables
+  function pill(cls, text) { return h('span', { class: 'pill ' + cls, text: text }); }
+  function actions(m, row, extra) {
+    var td = h('td', { class: 'act' });
+    (extra || []).forEach(function (x) { td.appendChild(x); });
+    var ub = h('button', { class: 'btn sm', type: 'button', text: 'Ubah' });
+    ub.disabled = !canWrite; ub.addEventListener('click', function () { startEdit(m, row); });
+    var db_ = h('button', { class: 'btn sm danger', type: 'button', text: 'Hapus' }), timer;
+    db_.disabled = !canWrite;
+    db_.addEventListener('click', function () {
+      if (db_.classList.contains('arm')) { remove(m, row.id); return; }
+      db_.classList.add('arm'); db_.textContent = 'Yakin?';
+      timer = setTimeout(function () { db_.classList.remove('arm'); db_.textContent = 'Hapus'; }, 3000);
+    });
+    td.appendChild(ub); td.appendChild(db_);
+    return td;
+  }
+  function th(txt, num) { return h('th', { class: num ? 'num' : '', text: txt }); }
+  function fillTable(m, heads, rowFn) {
+    var t = $('#tbl-' + m); t.textContent = '';
+    var tr = h('tr'); heads.forEach(function (x) { tr.appendChild(th(x[0], x[1])); }); tr.appendChild(h('th'));
+    t.appendChild(h('thead', {}, [tr]));
+    var tb = h('tbody'); t.appendChild(tb);
+    var rows = data[m].slice().sort(MODS[m].sort);
+    if (!rows.length) {
+      var e = h('tr', {}, [h('td', { class: 'empty', colspan: heads.length + 1, text: 'Belum ada data. Isi form di sebelah untuk menambah.' })]);
+      tb.appendChild(e); return;
+    }
+    rows.forEach(function (r) {
+      var row = rowFn(r);
+      if (editing[m] === r.id) row.className = 'edit';
+      tb.appendChild(row);
+    });
+  }
+  function td(txt, num) { return h('td', { class: num ? 'num' : '', text: txt }); }
+  function tdNode(node) { return h('td', {}, [node]); }
+
+  function renderPO() {
+    fillTable('po', [['No. PO'], ['Tanggal'], ['Supplier'], ['Barang'], ['Nilai', 1], ['Tiba'], ['Status']], function (r) {
+      var tr = h('tr');
+      tr.appendChild(td(r.no)); tr.appendChild(td(tgl(r.tanggal))); tr.appendChild(td(r.supplier)); tr.appendChild(td(r.item));
+      tr.appendChild(td(rp(r.nilai), 1));
+      var late = r.status !== 'Diterima' && r.eta && r.eta < TODAY;
+      tr.appendChild(td(tgl(r.eta)));
+      var sel = h('select', { 'aria-label': 'Status ' + r.no, style: 'width:auto;padding:3px 6px;font-size:12px' });
+      STATUS_PO.forEach(function (s) { var o = h('option', { value: s, text: s }); if (s === r.status) o.selected = true; sel.appendChild(o); });
+      sel.disabled = !canWrite;
+      sel.addEventListener('change', function () { if (db) db.doc('po/' + r.id).update({ status: sel.value }).catch(fail); });
+      var cell = h('td', {}, [sel]); if (late) { cell.appendChild(document.createTextNode(' ')); cell.appendChild(pill('bad', 'Lewat ETA')); }
+      tr.appendChild(cell); tr.appendChild(actions('po', r)); return tr;
+    });
+  }
+  function renderKas() {
+    fillTable('kas', [['Tanggal'], ['Keterangan'], ['Penerimaan', 1], ['Pengeluaran', 1]], function (r) {
+      var tr = h('tr');
+      tr.appendChild(td(tgl(r.tanggal))); tr.appendChild(td(r.keterangan));
+      tr.appendChild(td(r.jenis === 'masuk' ? rp(r.jumlah) : '', 1)); tr.appendChild(td(r.jenis === 'keluar' ? rp(r.jumlah) : '', 1));
+      tr.appendChild(actions('kas', r)); return tr;
+    });
+  }
+  function renderOpenItems(m) {
+    var pk = MODS[m].paidKey, lab = m === 'ap' ? 'Dibayar' : 'Diterima';
+    fillTable(m, [['No.'], [MODS[m].who], ['Jatuh tempo'], ['Jumlah', 1], [lab, 1], ['Sisa', 1], ['Status']], function (r) {
+      var tr = h('tr'), sisa = (+r.jumlah || 0) - (+r[pk] || 0), u = umur(r.jatuh_tempo);
+      tr.appendChild(td(r.no)); tr.appendChild(td(r.pihak)); tr.appendChild(td(tgl(r.jatuh_tempo)));
+      tr.appendChild(td(rp(r.jumlah), 1)); tr.appendChild(td(rp(r[pk]), 1)); tr.appendChild(td(rp(Math.max(sisa, 0)), 1));
+      tr.appendChild(tdNode(sisa <= 0 ? pill('ok', 'Lunas') : u > 0 ? pill('bad', 'Telat ' + u + ' hari') : pill('mute', 'Belum jatuh tempo')));
+      var extra = [];
+      if (sisa > 0) {
+        var lb = h('button', { class: 'btn sm', type: 'button', text: m === 'ap' ? 'Lunasi' : 'Terima' });
+        lb.disabled = !canWrite;
+        lb.addEventListener('click', function () { var u2 = {}; u2[pk] = +r.jumlah || 0; if (db) db.doc(m + '/' + r.id).update(u2).catch(fail); });
+        extra.push(lb);
+      }
+      tr.appendChild(actions(m, r, extra)); return tr;
+    });
+  }
+
+  // ---- summary
+  function sisaOf(m, r) { return Math.max((+r.jumlah || 0) - (+r[MODS[m].paidKey] || 0), 0); }
+  function stats() {
+    var s = {};
+    var po = data.po.filter(function (r) { return r.status !== 'Diterima'; });
+    s.poN = po.length; s.poVal = po.reduce(function (a, r) { return a + (+r.nilai || 0); }, 0);
+    s.poLate = po.filter(function (r) { return r.eta && r.eta < TODAY; }).length;
+    var masuk = 0, keluar = 0; data.kas.forEach(function (r) { if (r.jenis === 'masuk') masuk += +r.jumlah || 0; else keluar += +r.jumlah || 0; });
+    s.saldo = (+settings.saldo_awal || 0) + masuk - keluar;
+    ['ap', 'ar'].forEach(function (m) {
+      var open = data[m].filter(function (r) { return sisaOf(m, r) > 0; });
+      s[m] = open.reduce(function (a, r) { return a + sisaOf(m, r); }, 0);
+      var late = open.filter(function (r) { return umur(r.jatuh_tempo) > 0; });
+      s[m + 'Late'] = late.reduce(function (a, r) { return a + sisaOf(m, r); }, 0); s[m + 'LateN'] = late.length;
+      var bk = [0, 0, 0, 0];
+      open.forEach(function (r) { var u = umur(r.jatuh_tempo); bk[u <= 0 ? 0 : u <= 30 ? 1 : u <= 60 ? 2 : 3] += sisaOf(m, r); });
+      s[m + 'Bk'] = bk;
+    });
+    return s;
+  }
+  function kpi(l, v, n, bad) { return h('div', { class: 'kpi' + (bad ? ' bad' : '') }, [h('div', { class: 'l', text: l }), h('div', { class: 'v', text: v }), h('div', { class: 'n', text: n })]); }
+  function renderKpis(s) {
+    var box = $('#kpis'); box.textContent = '';
+    box.appendChild(kpi('Saldo kas', rp(s.saldo), 'Saldo awal + transaksi', s.saldo < 0));
+    box.appendChild(kpi('PO terbuka', rp(s.poVal), s.poN + ' PO' + (s.poLate ? ', ' + s.poLate + ' lewat ETA' : '')));
+    box.appendChild(kpi('Hutang', rp(s.ap), 'Sisa belum dibayar'));
+    box.appendChild(kpi('Hutang lewat tempo', rp(s.apLate), s.apLateN + ' faktur', s.apLate > 0));
+    box.appendChild(kpi('Piutang', rp(s.ar), 'Sisa belum diterima'));
+    box.appendChild(kpi('Piutang lewat tempo', rp(s.arLate), s.arLateN + ' tagihan', s.arLate > 0));
+  }
+  var BK = ['Belum jatuh tempo', '1–30 hari', '31–60 hari', 'Lebih 60 hari'];
+  function renderAging(id, bk) {
+    var box = $(id); box.textContent = '';
+    var mx = Math.max.apply(null, bk.concat([1]));
+    bk.forEach(function (v, i) {
+      var fill = h('i'); fill.style.width = (v / mx * 100) + '%';
+      box.appendChild(h('div', { class: 'bar' + (i ? ' late' : '') }, [h('span', { text: BK[i] }), h('span', { class: 't' }, [fill]), h('span', { class: 'x', text: rp(v) })]));
+    });
+  }
+  function renderCash() {
+    var days = [], base = new Date();
+    for (var i = 13; i >= 0; i--) { var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i); days.push({ iso: isoOf(d), d: d, in: 0, out: 0 }); }
+    var idx = {}; days.forEach(function (x, i) { idx[x.iso] = i; });
+    data.kas.forEach(function (r) { var i = idx[r.tanggal]; if (i != null) { if (r.jenis === 'masuk') days[i].in += +r.jumlah || 0; else days[i].out += +r.jumlah || 0; } });
+    var W = 700, H = 200, L = 8, B = 22, T = 8, mx = Math.max.apply(null, days.map(function (x) { return Math.max(x.in, x.out); }).concat([1]));
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Penerimaan dan pengeluaran kas per hari');
+    var cw = (W - L * 2) / 14, bw = cw * 0.34;
+    function rect(x, y, w, hh, fill, tip) {
+      var r = document.createElementNS(ns, 'rect'); r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', Math.max(hh, 0)); r.setAttribute('rx', 2); r.setAttribute('fill', fill);
+      var t = document.createElementNS(ns, 'title'); t.textContent = tip; r.appendChild(t); svg.appendChild(r);
+    }
+    var base_ = document.createElementNS(ns, 'line'); base_.setAttribute('x1', L); base_.setAttribute('x2', W - L); base_.setAttribute('y1', H - B); base_.setAttribute('y2', H - B); base_.setAttribute('stroke', 'var(--line)'); svg.appendChild(base_);
+    days.forEach(function (x, i) {
+      var cx = L + cw * i + cw / 2, ph = (H - B - T);
+      var hi = x.in / mx * ph, ho = x.out / mx * ph;
+      rect(cx - bw - 1, H - B - hi, bw, hi, 'var(--accent)', tgl(x.iso) + ': penerimaan ' + rp(x.in));
+      rect(cx + 1, H - B - ho, bw, ho, 'var(--out)', tgl(x.iso) + ': pengeluaran ' + rp(x.out));
+      if (i % 2 === 0 || cw > 60) {
+        var tx = document.createElementNS(ns, 'text'); tx.setAttribute('x', cx); tx.setAttribute('y', H - 6); tx.setAttribute('text-anchor', 'middle'); tx.textContent = x.d.getDate() + ' ' + BLN[x.d.getMonth()]; svg.appendChild(tx);
+      }
+    });
+    var box = $('#cashchart'); box.textContent = ''; box.appendChild(svg);
+    if (!data.kas.length) box.appendChild(h('div', { class: 'note', text: 'Belum ada transaksi kas. Tambah dari tab General Cashier.' }));
+  }
+
+  function render() {
+    var s = stats();
+    renderKpis(s);
+    if (active === 'ring') { renderAging('#aging-ap', s.apBk); renderAging('#aging-ar', s.arBk); renderCash(); }
+    if (active === 'po') renderPO();
+    if (active === 'kas') renderKas();
+    if (active === 'ap') renderOpenItems('ap');
+    if (active === 'ar') renderOpenItems('ar');
+    var sa = $('#saldo-awal'); if (sa && document.activeElement !== sa) sa.value = settings.saldo_awal || 0;
+  }
+  function setWritable(w) {
+    canWrite = w;
+    document.querySelectorAll('form input, form select, form button, #saldo-awal, #saldo-save').forEach(function (e) { e.disabled = !w; });
+    if (!w) note('Anda hanya bisa melihat data. Untuk mengisi, minta akses Contributor atau Editor.');
+  }
+
+  ['po', 'kas', 'ap', 'ar'].forEach(buildPane);
+  showTab();
+
+  // Penyimpanan lokal: data tersimpan di browser ini (localStorage), tanpa server.
+  var KEY = 'kas-purchasing-ap-ar-v1', store = {}, subs = [];
+  try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { store = {}; }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { note('Browser menolak menyimpan data. Cek pengaturan privasi browser.'); } }
+  function notify() { subs.forEach(function (f) { f(); }); }
+  function nid() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function snapDoc(col, id) { var o = (store[col] || {})[id]; return { id: id, exists: !!o, data: function () { return o ? JSON.parse(JSON.stringify(o)) : undefined; } }; }
+  db = {
+    collection: function (col) {
+      return {
+        doc: function (id) { return docRef(col, id || nid()); },
+        onSnapshot: function (cb) {
+          var f = function () { cb({ docs: Object.keys(store[col] || {}).map(function (id) { return snapDoc(col, id); }) }); };
+          subs.push(f); f();
+        }
+      };
+    },
+    doc: function (path) { var p = path.split('/'); return docRef(p[0], p[1]); }
+  };
+  function docRef(col, id) {
+    return {
+      set: function (o) { (store[col] = store[col] || {})[id] = o; persist(); notify(); return Promise.resolve(); },
+      update: function (o) { var c = (store[col] = store[col] || {}); c[id] = Object.assign({}, c[id], o); persist(); notify(); return Promise.resolve(); },
+      delete: function () { if (store[col]) delete store[col][id]; persist(); notify(); return Promise.resolve(); },
+      onSnapshot: function (cb) { var f = function () { cb(snapDoc(col, id)); }; subs.push(f); f(); }
+    };
+  }
+  ['po', 'kas', 'ap', 'ar'].forEach(function (m) {
+    db.collection(m).onSnapshot(function (snap) {
+      data[m] = snap.docs.map(function (d) { var o = Object.assign({}, d.data()); o.id = d.id; return o; });
+      render();
+    });
+  });
+  db.doc('settings/kas').onSnapshot(function (snap) { settings = snap.exists ? snap.data() : { saldo_awal: 0 }; render(); });
+
+  $('#xl-out').addEventListener('click', function () {
+    if (!window.XLSX) { note('Pustaka Excel gagal dimuat. Cek koneksi internet lalu muat ulang.'); return; }
+    var wb = XLSX.utils.book_new();
+    function sheet(name, rows) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), name); }
+    sheet('Purchasing', data.po.slice().sort(MODS.po.sort).map(function (r) { return { 'No. PO': r.no, Tanggal: r.tanggal, Supplier: r.supplier, Barang: r.item, Nilai: +r.nilai || 0, 'Perkiraan tiba': r.eta, Status: r.status }; }));
+    sheet('Kas', data.kas.slice().sort(MODS.kas.sort).map(function (r) { return { Tanggal: r.tanggal, Jenis: r.jenis === 'masuk' ? 'Penerimaan' : 'Pengeluaran', Keterangan: r.keterangan, Jumlah: +r.jumlah || 0 }; }));
+    sheet('Hutang', data.ap.slice().sort(MODS.ap.sort).map(function (r) { return { 'No. faktur': r.no, Supplier: r.pihak, 'Tgl faktur': r.tgl, 'Jatuh tempo': r.jatuh_tempo, Jumlah: +r.jumlah || 0, Dibayar: +r.dibayar || 0, Sisa: sisaOf('ap', r) }; }));
+    sheet('Piutang', data.ar.slice().sort(MODS.ar.sort).map(function (r) { return { 'No. faktur': r.no, Pelanggan: r.pihak, 'Tgl faktur': r.tgl, 'Jatuh tempo': r.jatuh_tempo, Jumlah: +r.jumlah || 0, Diterima: +r.diterima || 0, Sisa: sisaOf('ar', r) }; }));
+    XLSX.writeFile(wb, 'kas-purchasing-ap-ar-' + TODAY + '.xlsx');
+  });  // Cadangan: unduh / pulihkan semua data sebagai file JSON.
+  $('#bk-out').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(store)], { type: 'application/json' }));
+    a.download = 'cadangan-kas-' + TODAY + '.json'; a.click();
+  });
+  $('#bk-in').addEventListener('change', function (ev) {
+    var f = ev.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try { store = JSON.parse(r.result); persist(); notify(); note('Cadangan dipulihkan.'); } catch (e) { note('File cadangan tidak valid.'); }
+    };
+    r.readAsText(f);
+  });
+})();
+</script>
+</body></html>
