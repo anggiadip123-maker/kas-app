@@ -503,7 +503,7 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
         var wb = XLSX.read(imp.buf, { type: 'array', sheets: name });
         impRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
         var first = impRows[0] && impRows[0][0], onlyFirst = impRows[0] && impRows[0].filter(function (x) { return x != null; }).length === 1;
-        var guess = onlyFirst && typeof first === 'string' ? first.toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); }) : imp.name.replace(/\.[^.]+$/, '').split(/[\s_(-]/)[0];
+        var guess = onlyFirst && typeof first === 'string' ? first.toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); }) : imp.name.replace(/\.[^.]+$/, '').split(/[\s_(-]/)[0].replace(/\b\w+/g, function (x) { return x.charAt(0).toUpperCase() + x.slice(1).toLowerCase(); });
         impCoOptions(guess); impMsg(''); impPreview();
       } catch (e) { impMsg('Sheet tidak bisa dibaca.'); }
     }, 30);
