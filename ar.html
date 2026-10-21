@@ -118,6 +118,7 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="lfl-co" aria-label="Filter akun perusahaan" style="width:auto;min-width:180px"></select>
         <select id="lfl-st" aria-label="Filter status" style="width:auto"><option value="">Semua status</option><option value="open">Belum lunas</option><option value="late">Terlambat</option><option value="paid">Lunas</option></select>
+        <button class="btn" id="xl2" type="button">Export Excel</button>
       </div>
     </div>
     <div class="note" id="lfl-sum" style="margin-bottom:8px"></div>
@@ -278,15 +279,18 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
   }
 
   // ---- ledger list
+  function filteredLedger() {
+    var fc = $('#lfl-co').value, fs = $('#lfl-st').value;
+    return S.ledger.filter(function (l) {
+      return (!fc || l.companyId === fc) && (!fs || (fs === 'open' ? sisa(l) > 0 : fs === 'late' ? sisa(l) > 0 && umur(l) > 0 : sisa(l) <= 0));
+    });
+  }
   function renderLedger() {
     var t = clear($('#t-led'));
     t.appendChild(h('thead', {}, [h('tr', {}, ['Voucher', 'Tanggal', 'Perusahaan', 'Keterangan', 'Jumlah', 'Terbayar', 'Sisa', 'Jatuh tempo', 'Status', 'Aksi'].map(function (x, i) { return h('th', { class: i > 3 && i < 7 ? 'num' : '', text: x }); }))]));
     var tb = h('tbody'); t.appendChild(tb);
     if (!S.ledger.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Belum ada piutang. Isi form Input City Ledger.' })])); return; }
-    var fc = $('#lfl-co').value, fs = $('#lfl-st').value;
-    var shown = S.ledger.filter(function (l) {
-      return (!fc || l.companyId === fc) && (!fs || (fs === 'open' ? sisa(l) > 0 : fs === 'late' ? sisa(l) > 0 && umur(l) > 0 : sisa(l) <= 0));
-    });
+    var shown = filteredLedger();
     $('#lfl-sum').textContent = shown.length + ' dari ' + S.ledger.length + ' voucher · Sisa piutang ' + rp(shown.reduce(function (a, l) { return a + sisa(l); }, 0));
     if (!shown.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Tidak ada voucher yang cocok dengan filter.' })])); return; }
     shown.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); }).forEach(function (l) {
@@ -366,12 +370,17 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
   }
 
   // ---- export / backup
+  $('#xl2').addEventListener('click', function () { $('#xl').click(); });
   $('#xl').addEventListener('click', function () {
     if (!window.XLSX) { banner('Pustaka Excel gagal dimuat. Cek koneksi internet lalu muat ulang.'); return; }
     var wb = XLSX.utils.book_new();
     function sheet(n, rows) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), n); }
-    sheet('Koleksi', collection().map(function (r) { return { Perusahaan: r.c.nama, PIC: r.c.pic || '', 'No. WhatsApp': r.c.telp || '', 'Total tagihan': r.total, 'Jatuh tempo': r.due, 'Hari terlambat': Math.max(r.u, 0) }; }));
-    sheet('City Ledger', S.ledger.map(function (l) { var c = coOf(l.companyId); return { Voucher: l.voucher, Tanggal: l.tanggal, Perusahaan: c ? c.nama : '', Keterangan: l.keterangan || '', Jumlah: +l.jumlah, Terbayar: paid(l), Sisa: sisa(l), 'Jatuh tempo': due(l) }; }));
+    var vs = filteredLedger();
+    sheet('Per Transaksi', vs.map(function (l) { var c = coOf(l.companyId), s = sisa(l), u = umur(l); return { Voucher: l.voucher, Tanggal: l.tanggal, Akun: c ? c.nama : '', Keterangan: l.keterangan || '', 'Termin (hari)': +l.term || 30, 'Jatuh tempo': due(l), Jumlah: +l.jumlah, Terbayar: paid(l), Sisa: s, Status: s <= 0 ? 'Lunas' : u > 0 ? 'Terlambat' : 'Belum jatuh tempo', 'Hari terlambat': s > 0 ? Math.max(u, 0) : 0 }; }));
+    var pay = [];
+    vs.forEach(function (l) { var c = coOf(l.companyId); (l.bayar || []).forEach(function (b) { pay.push({ Voucher: l.voucher, Akun: c ? c.nama : '', 'Tanggal bayar': b.tgl, 'Jumlah bayar': +b.jumlah }); }); });
+    sheet('Pembayaran', pay);
+    sheet('Ringkasan per Akun', collection().filter(function (r) { var f = $('#lfl-co').value; return !f || r.c.id === f; }).map(function (r) { return { Akun: r.c.nama, PIC: r.c.pic || '', 'No. WhatsApp': r.c.telp || '', 'Total tagihan': r.total, 'Jatuh tempo terdekat': r.due, 'Hari terlambat': Math.max(r.u, 0) }; }));
     sheet('Corporate', S.companies.map(function (c) { return { Perusahaan: c.nama, 'Limit kredit': +c.limit || 0, Terpakai: terpakai(c.id), PIC: c.pic || '', 'No. WhatsApp': c.telp || '' }; }));
     sheet('Aging', aging().map(function (r) { return { Kategori: r.label, Perusahaan: r.n, 'Total piutang': r.amt }; }));
     XLSX.writeFile(wb, 'ar-lengkap-' + TODAY + '.xlsx');
