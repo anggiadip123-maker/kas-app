@@ -65,6 +65,7 @@ td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .chk{flex-direction:row;align-items:center;gap:8px;font-weight:600}
 .chk input{width:auto}
 [hidden]{display:none!important}
+.imp{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
 footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
@@ -118,11 +119,33 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="lfl-co" aria-label="Filter akun perusahaan" style="width:auto;min-width:180px"></select>
         <select id="lfl-st" aria-label="Filter status" style="width:auto"><option value="">Semua status</option><option value="open">Belum lunas</option><option value="late">Terlambat</option><option value="paid">Lunas</option></select>
+        <button class="btn" id="imp-open" type="button">Upload Excel</button>
         <button class="btn" id="xl2" type="button">Export Excel</button>
       </div>
     </div>
     <div class="note" id="lfl-sum" style="margin-bottom:8px"></div>
+    <div id="imp" class="imp" hidden>
+      <h3 style="margin:0 0 4px">Upload Excel</h3>
+      <div class="note" style="margin-bottom:8px">File dibaca di browser ini saja dan tidak dikirim ke server. Kolom dikenali dari judulnya: Name, Invoice Number, Booking ID, Check in, Check out, Total Night, Nett Price, Date Sent Invoice, Due Date, Payment Date. <a href="#" id="imp-tpl" style="color:var(--blue)">Unduh contoh format</a></div>
+      <div class="two">
+        <label>File Excel<input type="file" id="imp-file" accept=".xlsx,.xls,.csv"></label>
+        <label>Sheet<select id="imp-sheet"></select></label>
+      </div>
+      <div class="two">
+        <label>Akun<select id="imp-co"></select></label>
+        <label id="imp-new-w">Nama akun baru<input id="imp-new" placeholder="Hotelbeds"></label>
+      </div>
+      <div class="two">
+        <label>Termin jika Due Date kosong<select id="imp-term"><option value="14">14 hari</option><option value="30" selected>30 hari</option><option value="45">45 hari</option><option value="60">60 hari</option></select></label>
+        <label class="chk"><input type="checkbox" id="imp-paid" checked> Jika ada Payment Date, catat sudah dibayar</label>
+      </div>
+      <div class="msg" id="imp-msg" hidden></div>
+      <div id="imp-sum" class="note"></div>
+      <div class="tw"><table id="imp-prev"></table></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn pri" type="button" id="imp-go" disabled>Import ke City Ledger</button><button class="btn" type="button" id="imp-close">Tutup</button></div>
+    </div>
     <div class="tw"><table id="t-led"></table></div>
+    <div id="led-more" style="margin-top:8px"></div>
   </div>
   <div class="card">
     <div class="chd"><h3>Tabel Koleksi &amp; Follow-up Penagihan</h3>
@@ -231,7 +254,7 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) { fl.appendChild(h('option', { value: c.id, text: c.nama })); });
     fl.value = fcur; if (fl.value !== fcur) fl.value = '';
   }
-  ['lfl-co', 'lfl-st'].forEach(function (id) { $('#' + id).addEventListener('change', function () { renderLedger(); }); });
+  ['lfl-co', 'lfl-st'].forEach(function (id) { $('#' + id).addEventListener('change', function () { ledLim = 100; renderLedger(); }); });
   function limitCheck() {
     var c = coOf($('#lf-co').value), j = +$('#lf-jml').value || 0, m = $('#lf-msg'), w = $('#lf-over-w');
     if (c && c.limit && terpakai(c.id) + j > c.limit) {
@@ -279,6 +302,7 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
   }
 
   // ---- ledger list
+  var ledLim = 100;
   function filteredLedger() {
     var fc = $('#lfl-co').value, fs = $('#lfl-st').value;
     return S.ledger.filter(function (l) {
@@ -293,7 +317,14 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     var shown = filteredLedger();
     $('#lfl-sum').textContent = shown.length + ' dari ' + S.ledger.length + ' voucher · Sisa piutang ' + rp(shown.reduce(function (a, l) { return a + sisa(l); }, 0));
     if (!shown.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Tidak ada voucher yang cocok dengan filter.' })])); return; }
-    shown.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); }).forEach(function (l) {
+    var sorted = shown.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); });
+    var more = clear($('#led-more'));
+    if (sorted.length > ledLim) {
+      var mb = h('button', { class: 'btn', type: 'button', text: 'Tampilkan lebih banyak (' + Math.min(200, sorted.length - ledLim) + ' dari ' + (sorted.length - ledLim) + ' sisa)' });
+      mb.addEventListener('click', function () { ledLim += 200; renderLedger(); });
+      more.appendChild(mb);
+    }
+    sorted.slice(0, ledLim).forEach(function (l) {
       var c = coOf(l.companyId), s = sisa(l), u = umur(l), tr = h('tr');
       [l.voucher, tgl(l.tanggal), c ? c.nama : '—', l.keterangan || '—'].forEach(function (x) { tr.appendChild(h('td', { text: x })); });
       tr.appendChild(h('td', { class: 'num', text: rp(l.jumlah) })); tr.appendChild(h('td', { class: 'num', text: rp(paid(l)) })); tr.appendChild(h('td', { class: 'num', text: rp(s) }));
@@ -393,6 +424,133 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     r.onload = function () { try { var o = JSON.parse(r.result); if (!o.companies || !o.ledger) throw 0; S = o; save(); banner('Cadangan dipulihkan.'); } catch (e) { banner('File cadangan tidak valid.'); } };
     r.readAsText(f);
   });
+  // ---- upload Excel
+  var imp = { buf: null, name: '', result: null };
+  var serialIso = function (s) { return new Date(Math.round((s - 25569) * 864e5)).toISOString().slice(0, 10); };
+  function toIso(v) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number') return v > 20000 && v < 80000 ? serialIso(v) : '';
+    if (v instanceof Date) return isoOf(v);
+    var s = String(v).trim(), m;
+    if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return m[1] + '-' + pad(+m[2]) + '-' + pad(+m[3]);
+    if ((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))) return (m[3].length === 2 ? '20' + m[3] : m[3]) + '-' + pad(+m[2]) + '-' + pad(+m[1]);
+    return '';
+  }
+  var toNum = function (v) { if (typeof v === 'number') return v; var n = parseFloat(String(v == null ? '' : v).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+  var COLS = [['nama', /^(guest\s*)?name$|^nama|^tamu/i], ['voucher', /invoice\s*(no|nom)|no\.?\s*invoice|^voucher|^folio|no\.?\s*voucher/i], ['booking', /booking/i],
+    ['cin', /check\s*-?\s*in/i], ['cout', /check\s*-?\s*out/i], ['night', /night|malam/i], ['amt', /nett?\s*price|^amount|^jumlah|^nett?$|^total\s*tagihan/i],
+    ['sent', /date\s*sent|tgl\s*(kirim|invoice)|tanggal\s*(kirim|invoice)/i], ['due', /due\s*date|jatuh\s*tempo/i], ['pay', /payment\s*date|tgl\s*bayar|tanggal\s*bayar/i]];
+  function detect(rows) {
+    for (var i = 0; i < Math.min(rows.length, 60); i++) {
+      var map = {}, hits = 0;
+      (rows[i] || []).forEach(function (c, j) {
+        var t = String(c == null ? '' : c).trim(); if (!t) return;
+        COLS.forEach(function (cd) { if (map[cd[0]] == null && cd[1].test(t)) { map[cd[0]] = j; hits++; } });
+      });
+      if (map.nama != null && map.amt != null && map.voucher != null) return { row: i, map: map };
+    }
+    return null;
+  }
+  function parse(rows, det, opt) {
+    var m = det.map, out = [], skip = { header: 0, kosong: 0, dup: 0 }, seen = {};
+    S.ledger.forEach(function (l) { seen[l.companyId + '|' + l.voucher] = 1; });
+    var cid = opt.cid;
+    for (var i = det.row + 1; i < rows.length; i++) {
+      var r = rows[i] || [], nama = String(r[m.nama] == null ? '' : r[m.nama]).trim();
+      if (/^name$|^nama$/i.test(nama)) { skip.header++; continue; }
+      var vno = String(r[m.voucher] == null ? '' : r[m.voucher]).replace(/^\s*no\s*:?\s*/i, '').trim(), amt = toNum(r[m.amt]);
+      if (!nama || !vno || !(amt > 0)) { skip.kosong++; continue; }
+      if (seen[cid + '|' + vno]) { skip.dup++; continue; }
+      seen[cid + '|' + vno] = 1;
+      var cin = m.cin != null ? toIso(r[m.cin]) : '', cout = m.cout != null ? toIso(r[m.cout]) : '';
+      var sent = m.sent != null ? toIso(r[m.sent]) : '', dueD = m.due != null ? toIso(r[m.due]) : '', payD = m.pay != null ? toIso(r[m.pay]) : '';
+      var tg = sent || cout || cin || TODAY, term = dueD && dn(dueD) - dn(tg) > 0 ? dn(dueD) - dn(tg) : opt.term;
+      var ket = nama + (m.booking != null && r[m.booking] != null && r[m.booking] !== '' ? ' · Booking ' + r[m.booking] : '') + (cin ? ' · ' + tgl(cin) + (cout ? ' - ' + tgl(cout) : '') : '') + (m.night != null && r[m.night] ? ' (' + r[m.night] + ' malam)' : '');
+      out.push({ id: uid(), voucher: vno, tanggal: tg, companyId: cid, jumlah: amt, keterangan: ket, term: term, bayar: opt.paid && payD ? [{ tgl: payD, jumlah: amt }] : [] });
+    }
+    return { items: out, skip: skip };
+  }
+  function impMsg(t) { var m = $('#imp-msg'); m.hidden = !t; m.textContent = t; }
+  function impCoOptions(guess) {
+    var sel = $('#imp-co'); clear(sel);
+    S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) { sel.appendChild(h('option', { value: c.id, text: c.nama })); });
+    sel.appendChild(h('option', { value: '', text: '+ Akun baru' }));
+    var g = S.companies.filter(function (c) { return guess && c.nama.toLowerCase() === guess.toLowerCase(); })[0];
+    sel.value = g ? g.id : ''; $('#imp-new-w').hidden = !!sel.value; if (!sel.value && guess) $('#imp-new').value = guess;
+  }
+  var impRows = null;
+  function impPreview() {
+    var go = $('#imp-go'); go.disabled = true; clear($('#imp-prev')); $('#imp-sum').textContent = '';
+    if (!impRows) return;
+    var det = detect(impRows);
+    if (!det) { impMsg('Kolom tidak dikenali di sheet ini. Pastikan ada judul kolom Name, Invoice Number, dan Nett Price, atau pilih sheet lain.'); return; }
+    var cid = $('#imp-co').value || '__baru__';
+    var res = parse(impRows, det, { cid: cid, term: +$('#imp-term').value, paid: $('#imp-paid').checked });
+    imp.result = res; impMsg('');
+    var tot = res.items.reduce(function (a, l) { return a + l.jumlah; }, 0), pd = res.items.reduce(function (a, l) { return a + paid(l); }, 0);
+    $('#imp-sum').textContent = res.items.length + ' transaksi siap diimport · Total ' + rp(tot) + ' · Sudah dibayar ' + rp(pd) + ' · Belum dibayar ' + rp(tot - pd) + '. Dilewati: ' + res.skip.dup + ' sudah ada, ' + res.skip.header + ' judul berulang, ' + res.skip.kosong + ' baris kosong atau tanpa nilai.';
+    var t = $('#imp-prev');
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Voucher', 'Tanggal', 'Keterangan', 'Jumlah', 'Jatuh tempo', 'Bayar'].map(function (x, i) { return h('th', { class: i === 3 ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    res.items.slice(0, 5).forEach(function (l) { tb.appendChild(h('tr', {}, [h('td', { text: l.voucher }), h('td', { text: tgl(l.tanggal) }), h('td', { text: l.keterangan }), h('td', { class: 'num', text: rp(l.jumlah) }), h('td', { text: tgl(due(l)) }), h('td', { text: paid(l) ? 'Lunas ' + tgl(l.bayar[0].tgl) : 'Belum' })])); });
+    if (res.items.length > 5) tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 6, text: '… dan ' + (res.items.length - 5) + ' transaksi lainnya' })]));
+    go.disabled = !res.items.length;
+  }
+  function impLoadSheet() {
+    var name = $('#imp-sheet').value; impMsg('Membaca sheet…'); impRows = null;
+    setTimeout(function () {
+      try {
+        var wb = XLSX.read(imp.buf, { type: 'array', sheets: name });
+        impRows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
+        var first = impRows[0] && impRows[0][0], onlyFirst = impRows[0] && impRows[0].filter(function (x) { return x != null; }).length === 1;
+        var guess = onlyFirst && typeof first === 'string' ? first.toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); }) : imp.name.replace(/\.[^.]+$/, '').split(/[\s_(-]/)[0];
+        impCoOptions(guess); impMsg(''); impPreview();
+      } catch (e) { impMsg('Sheet tidak bisa dibaca.'); }
+    }, 30);
+  }
+  $('#imp-open').addEventListener('click', function () { $('#imp').hidden = false; $('#imp').scrollIntoView({ block: 'nearest' }); });
+  $('#imp-close').addEventListener('click', function () { $('#imp').hidden = true; });
+  $('#imp-file').addEventListener('change', function (ev) {
+    var f = ev.target.files[0]; if (!f) return;
+    if (!window.XLSX) { impMsg('Pustaka Excel gagal dimuat. Cek koneksi internet lalu muat ulang.'); return; }
+    impMsg('Membuka file…'); imp.name = f.name;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        imp.buf = new Uint8Array(r.result);
+        var names = XLSX.read(imp.buf, { type: 'array', bookSheets: true }).SheetNames, sh = $('#imp-sheet'); clear(sh);
+        names.forEach(function (n) { sh.appendChild(h('option', { value: n, text: n })); });
+        var pref = names.filter(function (n) { return /fix|ledger|invoice/i.test(n); }).pop() || names[names.length - 1]; sh.value = pref;
+        impLoadSheet();
+      } catch (e) { impMsg('File tidak bisa dibaca. Pastikan formatnya .xlsx, .xls, atau .csv.'); }
+    };
+    r.readAsArrayBuffer(f);
+  });
+  $('#imp-sheet').addEventListener('change', impLoadSheet);
+  $('#imp-co').addEventListener('change', function () { $('#imp-new-w').hidden = !!this.value; impPreview(); });
+  ['imp-term', 'imp-paid'].forEach(function (id) { $('#' + id).addEventListener('change', impPreview); });
+  $('#imp-go').addEventListener('click', function () {
+    if (!imp.result || !imp.result.items.length) return;
+    var cid = $('#imp-co').value;
+    if (!cid) {
+      var nm = $('#imp-new').value.trim(); if (!nm) { impMsg('Isi nama akun baru.'); return; }
+      var ex = S.companies.filter(function (c) { return c.nama.toLowerCase() === nm.toLowerCase(); })[0];
+      if (ex) cid = ex.id; else { cid = uid(); S.companies.push({ id: cid, nama: nm, limit: 0, pic: '', telp: '' }); }
+    }
+    // hitung ulang terhadap akun final supaya duplikat ikut tersaring
+    var det = detect(impRows), res = parse(impRows, det, { cid: cid, term: +$('#imp-term').value, paid: $('#imp-paid').checked });
+    res.items.forEach(function (l) { S.ledger.push(l); });
+    var n = res.items.length; imp.result = null; impRows = null; imp.buf = null; $('#imp-file').value = '';
+    save(); $('#imp').hidden = true; banner(n + ' transaksi berhasil diimport ke akun ' + (coOf(cid) || {}).nama + '.');
+    setTimeout(function () { banner(''); }, 6000);
+  });
+  $('#imp-tpl').addEventListener('click', function (e) {
+    e.preventDefault(); if (!window.XLSX) return;
+    var ws = XLSX.utils.aoa_to_sheet([['Name', 'Invoice Number', 'Booking ID', 'Check in Date', 'Check Out Date', 'Total Night', 'Nett Price', 'Date Sent Invoice', 'Due Date', 'Payment Date'],
+      ['Contoh Tamu', 'INV-0001', 'BK-123', '2026-10-20', '2026-10-22', 2, 1500000, '2026-10-22', '2026-11-21', '']]);
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'City Ledger'); XLSX.writeFile(wb, 'contoh-format-upload-ar.xlsx');
+  });
+
   render();
 })();
 </script>
