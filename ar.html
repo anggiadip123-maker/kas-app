@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AR Lengkap</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#eef1f7;--surface:#fff;--ink:#14213d;--muted:#5f6b85;--line:#e1e6f0;--head:#173d84;--blue:#1d5fd6;--blue-soft:#dfe9fb;
+  --ok:#1b8a4b;--ok-bg:#d9f3e4;--warn:#b7791f;--warn-bg:#fdf0cf;--bad:#c62b1f;--bad-bg:#fbdcd8;--shadow:0 2px 10px rgba(20,33,61,.08);
+  --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1424;--surface:#161e33;--ink:#e8ecf6;--muted:#97a3bf;--line:#26314d;--head:#0f2a5e;--blue:#5b92f0;--blue-soft:#1d2d52;
+  --ok:#5fd18f;--ok-bg:#16382a;--warn:#e8b455;--warn-bg:#3a2f14;--bad:#f28b82;--bad-bg:#43201d;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1424;--surface:#161e33;--ink:#e8ecf6;--muted:#97a3bf;--line:#26314d;--head:#0f2a5e;--blue:#5b92f0;--blue-soft:#1d2d52;
+  --ok:#5fd18f;--ok-bg:#16382a;--warn:#e8b455;--warn-bg:#3a2f14;--bad:#f28b82;--bad-bg:#43201d;--shadow:none;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45}
+header{background:var(--head);color:#fff;padding:14px 16px}
+.hin{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:40px;height:40px;border-radius:10px;background:#2f74e8;display:grid;place-items:center;font-weight:800}
+header h1{margin:0;font-size:24px;font-weight:800}
+.badge{background:#2f74e8;border-radius:999px;padding:4px 14px;font-weight:700;font-size:13px}
+.hr{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+main{max-width:1240px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.4fr);gap:16px;align-items:center}
+@media (max-width:900px){.top{grid-template-columns:minmax(0,1fr)}}
+.top h2{font-size:28px;margin:0;font-weight:800;letter-spacing:-.01em}
+.top p{margin:4px 0 0;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px}
+.kpi,.card{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--line);padding:14px;min-width:0}
+.kpi .l{font-weight:700;color:var(--ink);font-size:13px}
+.kpi .v{font-size:20px;font-weight:800;margin:4px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .n{font-size:12px;font-weight:600}
+.n.ok{color:var(--ok)}.n.warn{color:var(--warn)}.n.bad{color:var(--bad)}.n.blue{color:var(--blue)}
+.row3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+.card h3{margin:0;font-size:17px;font-weight:800}
+.card .sub{color:var(--muted);font-size:12px;margin:2px 0 10px}
+.chd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:700;margin-bottom:8px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{font:inherit;font-weight:700;border-radius:8px;border:1px solid var(--blue);background:var(--surface);color:var(--blue);padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.wide{width:100%;padding:11px}
+.btn.sm{padding:3px 9px;font-size:12px}
+.btn.wa{background:#1fa855;border-color:#1fa855;color:#fff;text-decoration:none;display:inline-block}
+.btn.h{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.arm{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{background:var(--blue-soft);text-align:left;font-size:12px;font-weight:700;padding:8px;white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.num{text-align:right}
+.pill{display:inline-block;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:700}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.blue{background:var(--blue-soft);color:var(--blue)}.pill.mute{background:var(--line);color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.total{background:var(--head);color:#fff;border-radius:8px;padding:12px;font-weight:800;margin-top:10px}
+.stack{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:10px;background:var(--line)}
+.msg{font-size:12px;margin:6px 0;color:var(--bad);font-weight:600}
+.msg.ok{color:var(--ok)}
+.note{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:14px 8px;white-space:normal}
+.chk{flex-direction:row;align-items:center;gap:8px;font-weight:600}
+.chk input{width:auto}
+[hidden]{display:none!important}
+footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<header><div class="hin">
+  <div class="logo" aria-hidden="true">AR</div>
+  <h1>AR Lengkap</h1><span class="badge">Hotel Bintang 4</span>
+  <div class="hr">
+    <button class="btn h" id="bk-out" type="button">Unduh cadangan</button>
+    <label class="btn h" style="flex-direction:row;margin:0;cursor:pointer">Pulihkan cadangan<input type="file" id="bk-in" accept="application/json" hidden></label>
+  </div>
+</div></header>
+<main>
+  <div class="top">
+    <div><h2>Dashboard Piutang</h2><p>Monitoring dan pengelolaan piutang hotel. Data tersimpan di browser ini.</p></div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+  <div id="banner" class="card" hidden></div>
+  <div class="row3">
+    <div class="card" id="c-corp">
+      <div class="chd"><div><h3>Master Corporate + Credit Limit</h3></div><button class="btn sm" id="corp-add" type="button">+ Tambah Corporate</button></div>
+      <form id="corp-form" hidden autocomplete="off">
+        <div class="two"><label>Nama perusahaan<input id="co-nama" required></label><label>Limit kredit (Rp)<input id="co-limit" type="number" min="0" step="1" required></label></div>
+        <div class="two"><label>Kontak PIC<input id="co-pic"></label><label>No. WhatsApp PIC<input id="co-telp" inputmode="tel" placeholder="0812..."></label></div>
+        <div style="display:flex;gap:8px"><button class="btn pri" type="submit" id="co-save">Simpan</button><button class="btn" type="button" id="co-cancel">Batal</button></div>
+      </form>
+      <div class="tw"><table id="t-corp"></table></div>
+    </div>
+    <div class="card" id="c-input">
+      <h3>Input City Ledger dari VHP</h3><div class="sub">Form pencatatan piutang berdasarkan Voucher Hibah Piutang</div>
+      <form id="led-form" autocomplete="off">
+        <div class="two"><label>No. Voucher VHP<input id="lf-no" required placeholder="VHP/2026/0001"></label><label>Tanggal<input id="lf-tgl" type="date" required></label></div>
+        <label>Tamu / Perusahaan<select id="lf-co" required></select></label>
+        <div class="two"><label>Jumlah piutang (Rp)<input id="lf-jml" type="number" min="1" step="1" required></label><label>Termin<select id="lf-term"><option value="14">14 hari</option><option value="30" selected>30 hari</option><option value="45">45 hari</option><option value="60">60 hari</option></select></label></div>
+        <label>Keterangan<input id="lf-ket" placeholder="Akomodasi 3 malam + F&amp;B"></label>
+        <label class="chk" id="lf-over-w" hidden><input type="checkbox" id="lf-over"> Lewati limit kredit (atas izin manajer)</label>
+        <div class="msg" id="lf-msg" hidden></div>
+        <button class="btn pri wide" type="submit">+ Input ke City Ledger</button>
+      </form>
+      <p class="note">Data langsung masuk ke AR Aging.</p>
+    </div>
+    <div class="card" id="c-aging">
+      <div class="chd"><h3>AR Aging Report</h3><span class="note" id="ag-date"></span></div>
+      <div class="tw"><table id="t-aging"></table></div>
+      <div class="stack" id="ag-stack"></div>
+      <div class="total" id="ag-total"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="chd"><h3>Daftar City Ledger</h3><span class="note">Catat pembayaran di kolom aksi</span></div>
+    <div class="tw"><table id="t-led"></table></div>
+  </div>
+  <div class="card">
+    <div class="chd"><h3>Tabel Koleksi &amp; Follow-up Penagihan</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="flt" aria-label="Filter status" style="width:auto"><option value="all">Semua</option><option value="late">Terlambat</option><option value="soon">Jatuh tempo 14 hari</option></select>
+        <button class="btn" id="xl" type="button">Export Excel</button>
+      </div>
+    </div>
+    <div class="tw"><table id="t-col"></table></div>
+  </div>
+  <footer><span id="foot"></span><a href="index.html" style="color:var(--blue)">Ke aplikasi kas, purchasing dan hutang</a></footer>
+</main>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var KEY = 'ar-lengkap-v1', S = { companies: [], ledger: [] };
+  try { var raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw && raw.companies) S = raw; } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { banner('Browser menolak menyimpan data. Cek pengaturan privasi browser.'); } render(); }
+  function banner(m) { var b = $('#banner'); b.textContent = m; b.hidden = !m; }
+  function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  var rp = function (v) { return (v < 0 ? '-Rp ' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.abs(Math.round(+v || 0))); };
+  var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var isoOf = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var TODAY = isoOf(new Date()), MONTH = TODAY.slice(0, 7);
+  var tgl = function (s) { if (!s) return '—'; var p = s.split('-'); return +p[2] + ' ' + BLN[+p[1] - 1] + ' ' + p[0]; };
+  var dn = function (iso) { var p = iso.split('-'); return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); };
+  var addDays = function (iso, n) { var p = iso.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
+  var TARGET = 85;
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) { if (k === 'text') e.textContent = attrs[k]; else if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); });
+    (kids || []).forEach(function (c) { e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(el) { el.textContent = ''; return el; }
+  function pill(cls, t) { return h('span', { class: 'pill ' + cls, text: t }); }
+
+  // ---- model helpers
+  var due = function (l) { return addDays(l.tanggal, +l.term || 30); };
+  var paid = function (l) { return (l.bayar || []).reduce(function (a, b) { return a + (+b.jumlah || 0); }, 0); };
+  var sisa = function (l) { return Math.max((+l.jumlah || 0) - paid(l), 0); };
+  var umur = function (l) { return dn(TODAY) - dn(due(l)); };
+  var coOf = function (id) { return S.companies.filter(function (c) { return c.id === id; })[0]; };
+  function terpakai(cid) { return S.ledger.filter(function (l) { return l.companyId === cid; }).reduce(function (a, l) { return a + sisa(l); }, 0); }
+  function stat(c) {
+    var t = terpakai(c.id), lim = +c.limit || 0;
+    if (!lim) return ['mute', 'Tanpa limit'];
+    var p = t / lim;
+    return p > 1 ? ['bad', 'Melebihi limit'] : p >= 1 ? ['bad', 'Penuh'] : p >= 0.8 ? ['warn', 'Hampir Penuh'] : ['ok', 'Aman'];
+  }
+
+  // ---- corporate
+  var editingCo = null;
+  $('#corp-add').addEventListener('click', function () { editingCo = null; openCoForm(); });
+  function openCoForm(c) {
+    $('#corp-form').hidden = false;
+    $('#co-nama').value = c ? c.nama : ''; $('#co-limit').value = c ? c.limit : ''; $('#co-pic').value = c ? c.pic || '' : ''; $('#co-telp').value = c ? c.telp || '' : '';
+    $('#co-save').textContent = c ? 'Simpan perubahan' : 'Simpan'; $('#co-nama').focus();
+  }
+  $('#co-cancel').addEventListener('click', function () { editingCo = null; $('#corp-form').hidden = true; });
+  $('#corp-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var o = { nama: $('#co-nama').value.trim(), limit: +$('#co-limit').value || 0, pic: $('#co-pic').value.trim(), telp: $('#co-telp').value.trim() };
+    if (editingCo) { var c = coOf(editingCo); Object.assign(c, o); } else { o.id = uid(); S.companies.push(o); }
+    editingCo = null; $('#corp-form').hidden = true; save();
+  });
+  function armBtn(label, fn) {
+    var b = h('button', { class: 'btn sm', type: 'button', text: label }), tm;
+    b.addEventListener('click', function () {
+      if (b.classList.contains('arm')) { fn(); return; }
+      b.classList.add('arm'); b.textContent = 'Yakin?'; tm = setTimeout(function () { b.classList.remove('arm'); b.textContent = label; }, 3000);
+    });
+    return b;
+  }
+  function renderCorp() {
+    var t = clear($('#t-corp'));
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Perusahaan', 'Limit kredit', 'Terpakai', 'Sisa kredit', 'Status', 'Aksi'].map(function (x, i) { return h('th', { class: i > 0 && i < 4 ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    if (!S.companies.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 6, text: 'Belum ada corporate. Klik + Tambah Corporate.' })])); return; }
+    S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) {
+      var u = terpakai(c.id), st = stat(c), tr = h('tr');
+      tr.appendChild(h('td', { text: c.nama, style: 'font-weight:700' }));
+      tr.appendChild(h('td', { class: 'num', text: c.limit ? rp(c.limit) : '—' }));
+      tr.appendChild(h('td', { class: 'num', text: rp(u) }));
+      tr.appendChild(h('td', { class: 'num', text: c.limit ? rp(c.limit - u) : '—' }));
+      tr.appendChild(h('td', {}, [pill(st[0], st[1])]));
+      var ub = h('button', { class: 'btn sm', type: 'button', text: 'Ubah' });
+      ub.addEventListener('click', function () { editingCo = c.id; openCoForm(c); });
+      var act = h('td', {}, [ub, document.createTextNode(' ')]);
+      var used = S.ledger.some(function (l) { return l.companyId === c.id; });
+      if (!used) act.appendChild(armBtn('Hapus', function () { S.companies = S.companies.filter(function (x) { return x.id !== c.id; }); save(); }));
+      tr.appendChild(act); tb.appendChild(tr);
+    });
+  }
+
+  // ---- input ledger
+  $('#lf-tgl').value = TODAY;
+  function renderCoSelect() {
+    var sel = $('#lf-co'), cur = sel.value; clear(sel);
+    sel.appendChild(h('option', { value: '', text: S.companies.length ? 'Pilih perusahaan' : 'Tambah corporate dulu' }));
+    S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) { sel.appendChild(h('option', { value: c.id, text: c.nama })); });
+    sel.value = cur; if (sel.value !== cur) sel.value = '';
+  }
+  function limitCheck() {
+    var c = coOf($('#lf-co').value), j = +$('#lf-jml').value || 0, m = $('#lf-msg'), w = $('#lf-over-w');
+    if (c && c.limit && terpakai(c.id) + j > c.limit) {
+      m.hidden = false; m.className = 'msg'; m.textContent = 'Melebihi limit kredit. Sisa kredit ' + rp(c.limit - terpakai(c.id)) + '.'; w.hidden = false; return false;
+    }
+    m.hidden = true; w.hidden = true; $('#lf-over').checked = false; return true;
+  }
+  ['lf-co', 'lf-jml'].forEach(function (id) { $('#' + id).addEventListener('input', limitCheck); });
+  $('#led-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!limitCheck() && !$('#lf-over').checked) return;
+    S.ledger.push({ id: uid(), voucher: $('#lf-no').value.trim(), tanggal: $('#lf-tgl').value, companyId: $('#lf-co').value, jumlah: +$('#lf-jml').value, keterangan: $('#lf-ket').value.trim(), term: +$('#lf-term').value, bayar: [] });
+    ['lf-no', 'lf-jml', 'lf-ket'].forEach(function (id) { $('#' + id).value = ''; });
+    $('#lf-over').checked = false; $('#lf-over-w').hidden = true;
+    var m = $('#lf-msg'); m.hidden = false; m.className = 'msg ok'; m.textContent = 'Tersimpan di City Ledger.'; setTimeout(function () { m.hidden = true; }, 2500);
+    save();
+  });
+
+  // ---- aging
+  var BK = [['0-30 Hari (Lancar)', '#1fa855', function (u) { return u <= 30; }], ['31-60 Hari', '#e5b02c', function (u) { return u > 30 && u <= 60; }],
+    ['61-90 Hari', '#e9822b', function (u) { return u > 60 && u <= 90; }], ['>90 Hari (Macet)', '#d6392b', function (u) { return u > 90; }]];
+  function aging() {
+    return BK.map(function (b) {
+      var rows = S.ledger.filter(function (l) { return sisa(l) > 0 && b[2](umur(l)); });
+      var cos = {}; rows.forEach(function (l) { cos[l.companyId] = 1; });
+      return { label: b[0], color: b[1], n: Object.keys(cos).length, amt: rows.reduce(function (a, l) { return a + sisa(l); }, 0) };
+    });
+  }
+  function renderAging() {
+    var a = aging(), total = a.reduce(function (x, y) { return x + y.amt; }, 0);
+    $('#ag-date').textContent = 'Per ' + tgl(TODAY);
+    var t = clear($('#t-aging'));
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Kategori umur', 'Perusahaan', 'Total piutang', '%'].map(function (x, i) { return h('th', { class: i ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    var stack = clear($('#ag-stack'));
+    a.forEach(function (r) {
+      var p = total ? r.amt / total * 100 : 0, tr = h('tr');
+      var d = h('span', { class: 'dot' }); d.style.background = r.color;
+      tr.appendChild(h('td', {}, [d, document.createTextNode(r.label)]));
+      tr.appendChild(h('td', { class: 'num', text: r.n })); tr.appendChild(h('td', { class: 'num', text: rp(r.amt) }));
+      tr.appendChild(h('td', { class: 'num', text: p.toFixed(1).replace('.', ',') + '%' })); tb.appendChild(tr);
+      var seg = h('i'); seg.style.cssText = 'display:block;height:100%;width:' + p + '%;background:' + r.color; stack.appendChild(seg);
+    });
+    $('#ag-total').textContent = 'Total Piutang: ' + rp(total);
+  }
+
+  // ---- ledger list
+  function renderLedger() {
+    var t = clear($('#t-led'));
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Voucher', 'Tanggal', 'Perusahaan', 'Keterangan', 'Jumlah', 'Terbayar', 'Sisa', 'Jatuh tempo', 'Status', 'Aksi'].map(function (x, i) { return h('th', { class: i > 3 && i < 7 ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    if (!S.ledger.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Belum ada piutang. Isi form Input City Ledger.' })])); return; }
+    S.ledger.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); }).forEach(function (l) {
+      var c = coOf(l.companyId), s = sisa(l), u = umur(l), tr = h('tr');
+      [l.voucher, tgl(l.tanggal), c ? c.nama : '—', l.keterangan || '—'].forEach(function (x) { tr.appendChild(h('td', { text: x })); });
+      tr.appendChild(h('td', { class: 'num', text: rp(l.jumlah) })); tr.appendChild(h('td', { class: 'num', text: rp(paid(l)) })); tr.appendChild(h('td', { class: 'num', text: rp(s) }));
+      tr.appendChild(h('td', { text: tgl(due(l)) }));
+      tr.appendChild(h('td', {}, [s <= 0 ? pill('ok', 'Lunas') : u > 0 ? pill('bad', 'Terlambat ' + u + ' hari') : pill('blue', 'Jatuh tempo ' + (-u) + ' hari')]));
+      var act = h('td');
+      if (s > 0) {
+        var inp = h('input', { type: 'number', min: '1', max: s, step: '1', 'aria-label': 'Jumlah bayar ' + l.voucher, placeholder: 'Bayar', style: 'width:110px;padding:3px 6px' });
+        var bb = h('button', { class: 'btn sm', type: 'button', text: 'Catat' });
+        bb.addEventListener('click', function () { var v = Math.min(+inp.value || 0, s); if (v > 0) { (l.bayar = l.bayar || []).push({ tgl: TODAY, jumlah: v }); save(); } });
+        var fb = h('button', { class: 'btn sm', type: 'button', text: 'Lunas' });
+        fb.addEventListener('click', function () { (l.bayar = l.bayar || []).push({ tgl: TODAY, jumlah: s }); save(); });
+        act.appendChild(inp); act.appendChild(document.createTextNode(' ')); act.appendChild(bb); act.appendChild(document.createTextNode(' ')); act.appendChild(fb); act.appendChild(document.createTextNode(' '));
+      }
+      act.appendChild(armBtn('Hapus', function () { S.ledger = S.ledger.filter(function (x) { return x.id !== l.id; }); save(); }));
+      tr.appendChild(act); tb.appendChild(tr);
+    });
+  }
+
+  // ---- collection
+  function collection() {
+    var by = {};
+    S.ledger.forEach(function (l) { if (sisa(l) > 0) { (by[l.companyId] = by[l.companyId] || []).push(l); } });
+    return Object.keys(by).map(function (cid) {
+      var rows = by[cid], c = coOf(cid) || { nama: '—' };
+      var first = rows.slice().sort(function (a, b) { return due(a).localeCompare(due(b)); })[0];
+      return { c: c, total: rows.reduce(function (a, l) { return a + sisa(l); }, 0), due: due(first), u: umur(first), no: first.voucher };
+    }).sort(function (a, b) { return b.u - a.u; });
+  }
+  function waLink(r) {
+    var d = (r.c.telp || '').replace(/\D/g, ''); if (d.charAt(0) === '0') d = '62' + d.slice(1);
+    var msg = 'Yth. ' + (r.c.pic || 'Bapak/Ibu') + ' (' + r.c.nama + '),\nKami mengingatkan tagihan Hotel Bintang 4 sebesar ' + rp(r.total) + ', jatuh tempo ' + tgl(r.due) + '. Mohon konfirmasi jadwal pembayaran. Terima kasih.';
+    return 'https://wa.me/' + d + '?text=' + encodeURIComponent(msg);
+  }
+  function renderCol() {
+    var f = $('#flt').value, rows = collection().filter(function (r) { return f === 'late' ? r.u > 0 : f === 'soon' ? r.u <= 0 && r.u >= -14 : true; });
+    var t = clear($('#t-col'));
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Perusahaan', 'Kontak PIC', 'Total tagihan', 'Jatuh tempo', 'Status', 'Aksi'].map(function (x, i) { return h('th', { class: i === 2 ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    if (!rows.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 6, text: 'Tidak ada tagihan yang cocok.' })])); return; }
+    rows.forEach(function (r) {
+      var tr = h('tr');
+      tr.appendChild(h('td', { text: r.c.nama, style: 'font-weight:700' }));
+      tr.appendChild(h('td', { text: (r.c.pic || '—') + (r.c.telp ? ' · ' + r.c.telp : '') }));
+      tr.appendChild(h('td', { class: 'num', text: rp(r.total) })); tr.appendChild(h('td', { text: tgl(r.due) }));
+      tr.appendChild(h('td', {}, [r.u > 0 ? pill('bad', 'Terlambat ' + r.u + ' hari') : pill('blue', 'Jatuh tempo ' + (-r.u) + ' hari')]));
+      var a = h('a', { class: 'btn sm wa', text: 'WhatsApp', target: '_blank', rel: 'noopener' });
+      if (r.c.telp) a.href = waLink(r); else { a.removeAttribute('href'); a.style.opacity = '.5'; a.title = 'Isi nomor WhatsApp di Master Corporate'; }
+      tr.appendChild(h('td', {}, [a])); tb.appendChild(tr);
+    });
+  }
+  $('#flt').addEventListener('change', renderCol);
+
+  // ---- KPIs
+  function kpi(l, v, n, cls) { return h('div', { class: 'kpi' }, [h('div', { class: 'l', text: l }), h('div', { class: 'v', text: v }), h('div', { class: 'n ' + cls, text: n })]); }
+  function renderKpis() {
+    var open = S.ledger.filter(function (l) { return sisa(l) > 0; });
+    var total = open.reduce(function (a, l) { return a + sisa(l); }, 0);
+    var late = open.filter(function (l) { return umur(l) > 0; });
+    var lateAmt = late.reduce(function (a, l) { return a + sisa(l); }, 0);
+    var coll = 0; S.ledger.forEach(function (l) { (l.bayar || []).forEach(function (b) { if ((b.tgl || '').slice(0, 7) === MONTH) coll += +b.jumlah || 0; }); });
+    var rate = coll + lateAmt ? Math.round(coll / (coll + lateAmt) * 100) : 0;
+    var act = {}; open.forEach(function (l) { act[l.companyId] = 1; });
+    var box = clear($('#kpis'));
+    box.appendChild(kpi('Total Piutang', rp(total), open.length + ' voucher terbuka', 'blue'));
+    box.appendChild(kpi('Jatuh Tempo', rp(lateAmt), late.length + ' voucher terlambat', lateAmt ? 'bad' : 'ok'));
+    box.appendChild(kpi('Tertagih Bulan Ini', rp(coll), 'Target ' + TARGET + '% · Tercapai ' + rate + '%', rate >= TARGET ? 'ok' : 'warn'));
+    box.appendChild(kpi('Jumlah Corporate', S.companies.length + ' Perusahaan', 'Piutang aktif: ' + Object.keys(act).length, 'blue'));
+  }
+
+  function render() {
+    renderKpis(); renderCorp(); renderCoSelect(); renderAging(); renderLedger(); renderCol();
+    $('#foot').textContent = 'AR Lengkap · Hotel Bintang 4 · Diperbarui ' + tgl(TODAY);
+  }
+
+  // ---- export / backup
+  $('#xl').addEventListener('click', function () {
+    if (!window.XLSX) { banner('Pustaka Excel gagal dimuat. Cek koneksi internet lalu muat ulang.'); return; }
+    var wb = XLSX.utils.book_new();
+    function sheet(n, rows) { XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), n); }
+    sheet('Koleksi', collection().map(function (r) { return { Perusahaan: r.c.nama, PIC: r.c.pic || '', 'No. WhatsApp': r.c.telp || '', 'Total tagihan': r.total, 'Jatuh tempo': r.due, 'Hari terlambat': Math.max(r.u, 0) }; }));
+    sheet('City Ledger', S.ledger.map(function (l) { var c = coOf(l.companyId); return { Voucher: l.voucher, Tanggal: l.tanggal, Perusahaan: c ? c.nama : '', Keterangan: l.keterangan || '', Jumlah: +l.jumlah, Terbayar: paid(l), Sisa: sisa(l), 'Jatuh tempo': due(l) }; }));
+    sheet('Corporate', S.companies.map(function (c) { return { Perusahaan: c.nama, 'Limit kredit': +c.limit || 0, Terpakai: terpakai(c.id), PIC: c.pic || '', 'No. WhatsApp': c.telp || '' }; }));
+    sheet('Aging', aging().map(function (r) { return { Kategori: r.label, Perusahaan: r.n, 'Total piutang': r.amt }; }));
+    XLSX.writeFile(wb, 'ar-lengkap-' + TODAY + '.xlsx');
+  });
+  $('#bk-out').addEventListener('click', function () {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'cadangan-ar-' + TODAY + '.json'; a.click();
+  });
+  $('#bk-in').addEventListener('change', function (ev) {
+    var f = ev.target.files[0]; if (!f) return; var r = new FileReader();
+    r.onload = function () { try { var o = JSON.parse(r.result); if (!o.companies || !o.ledger) throw 0; S = o; save(); banner('Cadangan dipulihkan.'); } catch (e) { banner('File cadangan tidak valid.'); } };
+    r.readAsText(f);
+  });
+  render();
+})();
+</script>
+</body>
+</html>
