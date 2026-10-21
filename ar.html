@@ -114,7 +114,13 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     </div>
   </div>
   <div class="card">
-    <div class="chd"><h3>Daftar City Ledger</h3><span class="note">Catat pembayaran di kolom aksi</span></div>
+    <div class="chd"><h3>Daftar City Ledger</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="lfl-co" aria-label="Filter akun perusahaan" style="width:auto;min-width:180px"></select>
+        <select id="lfl-st" aria-label="Filter status" style="width:auto"><option value="">Semua status</option><option value="open">Belum lunas</option><option value="late">Terlambat</option><option value="paid">Lunas</option></select>
+      </div>
+    </div>
+    <div class="note" id="lfl-sum" style="margin-bottom:8px"></div>
     <div class="tw"><table id="t-led"></table></div>
   </div>
   <div class="card">
@@ -219,7 +225,12 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     sel.appendChild(h('option', { value: '', text: S.companies.length ? 'Pilih perusahaan' : 'Tambah corporate dulu' }));
     S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) { sel.appendChild(h('option', { value: c.id, text: c.nama })); });
     sel.value = cur; if (sel.value !== cur) sel.value = '';
+    var fl = $('#lfl-co'), fcur = fl.value; clear(fl);
+    fl.appendChild(h('option', { value: '', text: 'Semua akun' }));
+    S.companies.slice().sort(function (a, b) { return a.nama.localeCompare(b.nama); }).forEach(function (c) { fl.appendChild(h('option', { value: c.id, text: c.nama })); });
+    fl.value = fcur; if (fl.value !== fcur) fl.value = '';
   }
+  ['lfl-co', 'lfl-st'].forEach(function (id) { $('#' + id).addEventListener('change', function () { renderLedger(); }); });
   function limitCheck() {
     var c = coOf($('#lf-co').value), j = +$('#lf-jml').value || 0, m = $('#lf-msg'), w = $('#lf-over-w');
     if (c && c.limit && terpakai(c.id) + j > c.limit) {
@@ -272,7 +283,13 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     t.appendChild(h('thead', {}, [h('tr', {}, ['Voucher', 'Tanggal', 'Perusahaan', 'Keterangan', 'Jumlah', 'Terbayar', 'Sisa', 'Jatuh tempo', 'Status', 'Aksi'].map(function (x, i) { return h('th', { class: i > 3 && i < 7 ? 'num' : '', text: x }); }))]));
     var tb = h('tbody'); t.appendChild(tb);
     if (!S.ledger.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Belum ada piutang. Isi form Input City Ledger.' })])); return; }
-    S.ledger.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); }).forEach(function (l) {
+    var fc = $('#lfl-co').value, fs = $('#lfl-st').value;
+    var shown = S.ledger.filter(function (l) {
+      return (!fc || l.companyId === fc) && (!fs || (fs === 'open' ? sisa(l) > 0 : fs === 'late' ? sisa(l) > 0 && umur(l) > 0 : sisa(l) <= 0));
+    });
+    $('#lfl-sum').textContent = shown.length + ' dari ' + S.ledger.length + ' voucher · Sisa piutang ' + rp(shown.reduce(function (a, l) { return a + sisa(l); }, 0));
+    if (!shown.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 10, text: 'Tidak ada voucher yang cocok dengan filter.' })])); return; }
+    shown.slice().sort(function (a, b) { return (sisa(a) > 0 ? 0 : 1) - (sisa(b) > 0 ? 0 : 1) || due(a).localeCompare(due(b)); }).forEach(function (l) {
       var c = coOf(l.companyId), s = sisa(l), u = umur(l), tr = h('tr');
       [l.voucher, tgl(l.tanggal), c ? c.nama : '—', l.keterangan || '—'].forEach(function (x) { tr.appendChild(h('td', { text: x })); });
       tr.appendChild(h('td', { class: 'num', text: rp(l.jumlah) })); tr.appendChild(h('td', { class: 'num', text: rp(paid(l)) })); tr.appendChild(h('td', { class: 'num', text: rp(s) }));
