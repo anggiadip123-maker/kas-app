@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>General Cashier</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#eef1f7;--surface:#fff;--ink:#14213d;--muted:#5f6b85;--line:#e1e6f0;--head:#173d84;--blue:#1d5fd6;--blue-soft:#dfe9fb;
+  --ok:#1b8a4b;--bad:#c62b1f;--shadow:0 2px 10px rgba(20,33,61,.08);--font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1424;--surface:#161e33;--ink:#e8ecf6;--muted:#97a3bf;--line:#26314d;--head:#0f2a5e;--blue:#5b92f0;--blue-soft:#1d2d52;--ok:#5fd18f;--bad:#f28b82;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1424;--surface:#161e33;--ink:#e8ecf6;--muted:#97a3bf;--line:#26314d;--head:#0f2a5e;--blue:#5b92f0;--blue-soft:#1d2d52;--ok:#5fd18f;--bad:#f28b82;--shadow:none;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45}
+header{background:var(--head);color:#fff;padding:14px 16px}
+.hin{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:22px;font-weight:800}
+.badge{background:#2f74e8;border-radius:999px;padding:4px 14px;font-weight:700;font-size:13px}
+.hr{margin-left:auto;display:flex;gap:14px;flex-wrap:wrap}
+.hr a{color:#fff;font-weight:600}
+main{max-width:1240px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px}
+.kpi,.card{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--line);padding:14px;min-width:0}
+.kpi .l{font-weight:700;font-size:13px}.kpi .v{font-size:20px;font-weight:800;margin:4px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.kpi .n{font-size:12px;color:var(--muted)}
+.split{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.card h3{margin:0 0 8px;font-size:17px;font-weight:800}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:700;margin-bottom:8px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.btn{font:inherit;font-weight:700;border-radius:8px;border:1px solid var(--blue);background:var(--surface);color:var(--blue);padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--blue);color:#fff;width:100%;padding:11px}
+.btn.sm{padding:3px 9px;font-size:12px}.btn.arm{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.chd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{background:var(--blue-soft);text-align:left;font-size:12px;font-weight:700;padding:8px;white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.num{text-align:right}.in{color:var(--ok);font-weight:700}.out{color:var(--bad);font-weight:700}
+.msg{font-size:12px;font-weight:600;margin:6px 0;color:var(--bad)}.msg.ok{color:var(--ok)}
+.note{font-size:12px;color:var(--muted)}.empty{color:var(--muted);padding:14px 8px;white-space:normal}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="hin"><h1>General Cashier</h1><span class="badge">Hotel Bintang 4</span>
+  <div class="hr"><a href="ar.html">Dashboard piutang</a><a href="index.html">Kas, purchasing, hutang</a></div></div></header>
+<main>
+  <div class="kpis" id="kpis"></div>
+  <div class="split">
+    <div class="card">
+      <h3>Input Transaksi</h3>
+      <form id="f" autocomplete="off">
+        <label>Tanggal<input id="f-tgl" type="date" required></label>
+        <label>Tipe<select id="f-tipe"><option value="AR">AR - Terima pembayaran piutang</option><option value="AP">AP - Bayar hutang</option><option value="IN">Income lain</option><option value="OUT">Pengeluaran</option></select></label>
+        <label id="w-ref" >Tagihan<select id="f-ref"></select></label>
+        <label>Keterangan<input id="f-ket" required placeholder="Bayar invoice #123"></label>
+        <label>Jumlah (Rp)<input id="f-amt" type="number" min="1" step="1" required></label>
+        <label>No. referensi (folio, invoice, PO)<input id="f-no" required></label>
+        <div class="msg" id="msg" hidden></div>
+        <button class="btn pri" type="submit">Simpan Transaksi</button>
+      </form>
+      <p class="note">Tipe AR otomatis mengurangi piutang di dashboard piutang. Tipe AP otomatis menambah pembayaran di faktur hutang.</p>
+    </div>
+    <div class="card">
+      <div class="chd"><h3 style="margin:0">Transaksi</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="flt" aria-label="Filter tipe" style="width:auto"><option value="">Semua tipe</option><option>AR</option><option>AP</option><option>IN</option><option>OUT</option></select>
+        <input id="flt-d" type="date" aria-label="Filter tanggal" style="width:auto"><button class="btn" id="xl" type="button">Export Excel</button></div></div>
+      <div class="tw"><table id="t"></table></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="bk-out" type="button">Unduh cadangan</button></div>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var K = 'kasir-v1', AR_K = 'ar-lengkap-v1', AP_K = 'kas-purchasing-ap-ar-v1';
+  var load = function (k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v || d; } catch (e) { return d; } };
+  var put = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+  var rp = function (v) { return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(+v || 0)); };
+  var BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var d = new Date(), TODAY = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  var tgl = function (s) { var p = s.split('-'); return +p[2] + ' ' + BLN[+p[1] - 1] + ' ' + p[0]; };
+  function uid() { return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function h(tag, a, kids) { var e = document.createElement(tag); Object.keys(a || {}).forEach(function (k) { if (k === 'text') e.textContent = a[k]; else if (k === 'class') e.className = a[k]; else e.setAttribute(k, a[k]); }); (kids || []).forEach(function (c) { e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
+  var T = load(K, []);
+  var sisaAR = function (l) { return Math.max((+l.jumlah || 0) - (l.bayar || []).reduce(function (a, b) { return a + (+b.jumlah || 0); }, 0), 0); };
+  var sisaAP = function (r) { return Math.max((+r.jumlah || 0) - (+r.dibayar || 0), 0); };
+
+  function openItems(tipe) {
+    if (tipe === 'AR') {
+      var s = load(AR_K, { companies: [], ledger: [] });
+      return s.ledger.filter(function (l) { return sisaAR(l) > 0; }).map(function (l) {
+        var c = s.companies.filter(function (x) { return x.id === l.companyId; })[0];
+        return { id: l.id, no: l.voucher, nama: c ? c.nama : '', sisa: sisaAR(l) };
+      });
+    }
+    var a = (load(AP_K, {}).ap) || {};
+    return Object.keys(a).filter(function (id) { return sisaAP(a[id]) > 0; }).map(function (id) { return { id: id, no: a[id].no, nama: a[id].pihak, sisa: sisaAP(a[id]) }; });
+  }
+  function fillRef() {
+    var tp = $('#f-tipe').value, w = $('#w-ref'), sel = $('#f-ref');
+    w.hidden = !(tp === 'AR' || tp === 'AP'); sel.textContent = '';
+    if (w.hidden) return;
+    w.firstChild.textContent = tp === 'AR' ? 'Voucher piutang' : 'Faktur hutang';
+    sel.appendChild(h('option', { value: '', text: 'Pilih tagihan' }));
+    openItems(tp).forEach(function (o) { sel.appendChild(h('option', { value: o.id, text: o.no + ' · ' + o.nama + ' · sisa ' + rp(o.sisa) })); });
+  }
+  $('#f-tipe').addEventListener('change', fillRef);
+  $('#f-ref').addEventListener('change', function () {
+    var o = openItems($('#f-tipe').value).filter(function (x) { return x.id === $('#f-ref').value; })[0]; if (!o) return;
+    $('#f-amt').value = o.sisa; $('#f-no').value = o.no; $('#f-ket').value = ($('#f-tipe').value === 'AR' ? 'Terima pembayaran ' : 'Bayar faktur ') + o.no + ' ' + o.nama;
+  });
+  function say(t, ok) { var m = $('#msg'); m.hidden = !t; m.textContent = t; m.className = 'msg' + (ok ? ' ok' : ''); }
+
+  $('#f').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var tp = $('#f-tipe').value, amt = +$('#f-amt').value, tx = { id: uid(), tgl: $('#f-tgl').value, tipe: tp, ket: $('#f-ket').value.trim(), amt: amt, no: $('#f-no').value.trim() };
+    if (tp === 'AR' || tp === 'AP') {
+      var ref = $('#f-ref').value, it = openItems(tp).filter(function (x) { return x.id === ref; })[0];
+      if (!it) { say('Pilih tagihan yang dibayar.'); return; }
+      if (amt > it.sisa) { say('Jumlah melebihi sisa tagihan ' + rp(it.sisa) + '.'); return; }
+      tx.link = ref;
+      if (tp === 'AR') { var s = load(AR_K, { companies: [], ledger: [] }); var l = s.ledger.filter(function (x) { return x.id === ref; })[0]; (l.bayar = l.bayar || []).push({ tgl: tx.tgl, jumlah: amt, tid: tx.id }); put(AR_K, s); }
+      else { var st = load(AP_K, {}); st.ap[ref].dibayar = (+st.ap[ref].dibayar || 0) + amt; put(AP_K, st); }
+    }
+    T.push(tx); put(K, T);
+    ['f-ket', 'f-amt', 'f-no'].forEach(function (id) { $('#' + id).value = ''; }); $('#f-ref').value = '';
+    fillRef(); say('Transaksi tersimpan.', true); setTimeout(function () { say(''); }, 2500); render();
+  });
+  function remove(tx) {
+    if (tx.tipe === 'AR' && tx.link) { var s = load(AR_K, null); if (s) { s.ledger.forEach(function (l) { l.bayar = (l.bayar || []).filter(function (b) { return b.tid !== tx.id; }); }); put(AR_K, s); } }
+    if (tx.tipe === 'AP' && tx.link) { var st = load(AP_K, null); if (st && st.ap && st.ap[tx.link]) { st.ap[tx.link].dibayar = Math.max((+st.ap[tx.link].dibayar || 0) - tx.amt, 0); put(AP_K, st); } }
+    T = T.filter(function (x) { return x.id !== tx.id; }); put(K, T); fillRef(); render();
+  }
+  var inT = function (x) { return x.tipe === 'AR' || x.tipe === 'IN'; };
+  function render() {
+    var masukHari = 0, keluarHari = 0, saldo = 0;
+    T.forEach(function (x) { saldo += inT(x) ? x.amt : -x.amt; if (x.tgl === TODAY) { if (inT(x)) masukHari += x.amt; else keluarHari += x.amt; } });
+    var k = $('#kpis'); k.textContent = '';
+    [['Saldo kas', rp(saldo), 'Semua transaksi'], ['Penerimaan hari ini', rp(masukHari), 'AR + income lain'], ['Pengeluaran hari ini', rp(keluarHari), 'AP + pengeluaran'], ['Jumlah transaksi', T.length, 'Tersimpan di browser']].forEach(function (z) {
+      k.appendChild(h('div', { class: 'kpi' }, [h('div', { class: 'l', text: z[0] }), h('div', { class: 'v', text: z[1] }), h('div', { class: 'n', text: z[2] })]));
+    });
+    var f = $('#flt').value, fd = $('#flt-d').value;
+    var rows = T.filter(function (x) { return (!f || x.tipe === f) && (!fd || x.tgl === fd); }).sort(function (a, b) { return b.tgl.localeCompare(a.tgl) || 0; }).reverse().slice(0, 100);
+    rows = T.filter(function (x) { return (!f || x.tipe === f) && (!fd || x.tgl === fd); }).slice().reverse().sort(function (a, b) { return b.tgl.localeCompare(a.tgl); }).slice(0, 100);
+    var t = $('#t'); t.textContent = '';
+    t.appendChild(h('thead', {}, [h('tr', {}, ['Tgl', 'Tipe', 'Keterangan', 'Jumlah', 'Ref', ''].map(function (x, i) { return h('th', { class: i === 3 ? 'num' : '', text: x }); }))]));
+    var tb = h('tbody'); t.appendChild(tb);
+    if (!rows.length) { tb.appendChild(h('tr', {}, [h('td', { class: 'empty', colspan: 6, text: 'Belum ada transaksi.' })])); return; }
+    rows.forEach(function (x) {
+      var del = h('button', { class: 'btn sm', type: 'button', text: 'Hapus' }), tm;
+      del.addEventListener('click', function () { if (del.classList.contains('arm')) { remove(x); return; } del.classList.add('arm'); del.textContent = 'Yakin?'; tm = setTimeout(function () { del.classList.remove('arm'); del.textContent = 'Hapus'; }, 3000); });
+      tb.appendChild(h('tr', {}, [h('td', { text: tgl(x.tgl) }), h('td', { class: inT(x) ? 'in' : 'out', text: x.tipe }), h('td', { text: x.ket }), h('td', { class: 'num ' + (inT(x) ? 'in' : 'out'), text: (inT(x) ? '+' : '-') + rp(x.amt) }), h('td', { text: x.no }), h('td', {}, [del])]));
+    });
+  }
+  ['flt', 'flt-d'].forEach(function (id) { $('#' + id).addEventListener('input', render); });
+  window.addEventListener('focus', function () { fillRef(); });
+  $('#xl').addEventListener('click', function () {
+    if (!window.XLSX) { say('Pustaka Excel gagal dimuat. Cek koneksi internet.'); return; }
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(T.length ? T.map(function (x) { return { Tanggal: x.tgl, Tipe: x.tipe, Keterangan: x.ket, Jumlah: x.amt, Referensi: x.no }; }) : [{}]), 'Transaksi');
+    XLSX.writeFile(wb, 'general-cashier-' + TODAY + '.xlsx');
+  });
+  $('#bk-out').addEventListener('click', function () { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(T)], { type: 'application/json' })); a.download = 'cadangan-kasir-' + TODAY + '.json'; a.click(); });
+  $('#f-tgl').value = TODAY; fillRef(); render();
+})();
+</script>
+</body>
+</html>
