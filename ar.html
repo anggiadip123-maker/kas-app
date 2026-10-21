@@ -74,6 +74,9 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
   <div class="logo" aria-hidden="true">AR</div>
   <h1>AR Lengkap</h1><span class="badge">Hotel Bintang 4</span>
   <div class="hr">
+    <span class="badge" id="cl-user" hidden></span>
+    <button class="btn h" id="cl-in" type="button" hidden>Masuk dengan Google</button>
+    <button class="btn h" id="cl-out" type="button" hidden>Keluar</button>
     <button class="btn h" id="bk-out" type="button">Simpan data ke file</button>
     <label class="btn h" style="flex-direction:row;margin:0;cursor:pointer">Buka data dari file<input type="file" id="bk-in" accept="application/json" hidden></label>
   </div>
@@ -165,7 +168,7 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
   var $ = function (s) { return document.querySelector(s); };
   var KEY = 'ar-lengkap-v1', S = { companies: [], ledger: [] };
   try { var raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw && raw.companies) S = raw; } catch (e) {}
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { banner('Browser menolak menyimpan data. Cek pengaturan privasi browser.'); } render(); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { banner('Browser menolak menyimpan data. Cek pengaturan privasi browser.'); } if (window.AR && AR.push) AR.push(S); render(); }
   function banner(m) { var b = $('#banner'); b.textContent = m; b.hidden = !m; }
   function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   var rp = function (v) { return (v < 0 ? '-Rp ' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.abs(Math.round(+v || 0))); };
@@ -572,8 +575,78 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'City Ledger'); XLSX.writeFile(wb, 'contoh-format-upload-ar.xlsx');
   });
 
+  window.AR = {
+    get: function () { return S; },
+    set: function (o) { S = o; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} render(); },
+    banner: banner, push: null
+  };
   render();
 })();
+</script>
+<script type="module">
+// Data bersama lewat Firebase (Auth Google + Firestore). Isi FIREBASE_CONFIG dari Firebase Console.
+// Kalau apiKey kosong, dashboard tetap jalan seperti biasa (data hanya di browser ini).
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  appId: ""
+};
+if (FIREBASE_CONFIG.apiKey) {
+  const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const [{ initializeApp }, A, F] = await Promise.all([
+    import(V + 'firebase-app.js'), import(V + 'firebase-auth.js'), import(V + 'firebase-firestore.js')
+  ]);
+  const app = initializeApp(FIREBASE_CONFIG), auth = A.getAuth(app), db = F.getFirestore(app);
+  const $ = s => document.querySelector(s), CH = 400, COL = 'ar';
+  let sent = {}, pushing = false, pending = null, unsub = null, seeded = false;
+  const say = m => AR.banner(m);
+
+  function fail(e) {
+    sent = {};
+    if (e && e.code === 'permission-denied') { say('Email ' + (auth.currentUser && auth.currentUser.email) + ' belum diizinkan. Minta pemilik menambahkan emailnya.'); A.signOut(auth); }
+    else say('Gagal sinkron ke server: ' + (e && e.message || e));
+  }
+  async function write(s) {
+    const chunks = [];
+    for (let i = 0; i < s.ledger.length; i += CH) chunks.push(JSON.stringify(s.ledger.slice(i, i + CH)));
+    const meta = JSON.stringify({ companies: s.companies, n: chunks.length });
+    const b = F.writeBatch(db); let ops = 0;
+    chunks.forEach((c, i) => { if (sent['c' + i] !== c) { b.set(F.doc(db, COL, 'c' + i), { rows: c }); sent['c' + i] = c; ops++; } });
+    for (let i = chunks.length; sent['c' + i] !== undefined; i++) { b.delete(F.doc(db, COL, 'c' + i)); delete sent['c' + i]; ops++; }
+    if (sent.meta !== meta) { b.set(F.doc(db, COL, 'meta'), { data: meta, n: chunks.length, t: Date.now() }); sent.meta = meta; ops++; }
+    if (ops) await b.commit();
+  }
+  async function push(s) {
+    pending = s; if (pushing) return; pushing = true;
+    try { while (pending) { const cur = pending; pending = null; await write(cur); } } catch (e) { pending = null; fail(e); }
+    pushing = false;
+  }
+  function listen() {
+    unsub = F.onSnapshot(F.collection(db, COL), snap => {
+      if (snap.metadata.hasPendingWrites || pushing || pending) return;
+      const d = {}; snap.forEach(x => { d[x.id] = x.data(); });
+      if (!d.meta) {
+        if (!seeded) { seeded = true; const s = AR.get(); if (s.ledger.length || s.companies.length) push(s); }
+        return;
+      }
+      seeded = true;
+      sent = {}; Object.keys(d).forEach(k => { if (/^c\d+$/.test(k)) sent[k] = d[k].rows; });
+      sent.meta = d.meta.data;
+      const m = JSON.parse(d.meta.data); let rows = [];
+      for (let i = 0; i < m.n; i++) { if (!d['c' + i]) return; rows = rows.concat(JSON.parse(d['c' + i].rows)); }
+      const o = { companies: m.companies, ledger: rows };
+      if (JSON.stringify(o) !== JSON.stringify(AR.get())) AR.set(o);
+    }, fail);
+  }
+  $('#cl-in').onclick = () => A.signInWithPopup(auth, new A.GoogleAuthProvider()).catch(e => say('Gagal masuk: ' + e.message));
+  $('#cl-out').onclick = () => A.signOut(auth);
+  A.onAuthStateChanged(auth, u => {
+    $('#cl-in').hidden = !!u; $('#cl-out').hidden = !u; $('#cl-user').hidden = !u;
+    if (u) { $('#cl-user').textContent = u.email; AR.push = push; seeded = false; listen(); say('Tersambung ke data bersama.'); setTimeout(() => say(''), 3000); }
+    else { AR.push = null; if (unsub) { unsub(); unsub = null; } }
+  });
+}
 </script>
 </body>
 </html>
