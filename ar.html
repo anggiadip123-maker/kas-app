@@ -121,6 +121,8 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
         <select id="lfl-st" aria-label="Filter status" style="width:auto"><option value="">Semua status</option><option value="open">Belum lunas</option><option value="late">Terlambat</option><option value="paid">Lunas</option></select>
         <button class="btn" id="imp-open" type="button">Upload Excel</button>
         <button class="btn" id="xl2" type="button">Export Excel</button>
+        <button class="btn" id="led-del" type="button">Hapus yang tampil</button>
+        <button class="btn" id="led-del-all" type="button">Kosongkan semua</button>
       </div>
     </div>
     <div class="note" id="lfl-sum" style="margin-bottom:8px"></div>
@@ -424,6 +426,25 @@ footer{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;al
     r.onload = function () { try { var o = JSON.parse(r.result); if (!o.companies || !o.ledger) throw 0; S = o; save(); banner('Cadangan dipulihkan.'); } catch (e) { banner('File cadangan tidak valid.'); } };
     r.readAsText(f);
   });
+  // ---- hapus massal (klik dua kali untuk konfirmasi)
+  function armed(btn, label, fn) {
+    var tm;
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('arm')) { clearTimeout(tm); btn.classList.remove('arm'); fn(); btn.textContent = label; return; }
+      var n = label === 'Kosongkan semua' ? S.ledger.length : filteredLedger().length;
+      if (!n) { banner('Tidak ada transaksi untuk dihapus.'); setTimeout(function () { banner(''); }, 3000); return; }
+      btn.classList.add('arm'); btn.textContent = 'Yakin hapus ' + n + '? Klik lagi';
+      tm = setTimeout(function () { btn.classList.remove('arm'); btn.textContent = label; }, 5000);
+    });
+  }
+  armed($('#led-del'), 'Hapus yang tampil', function () {
+    var ids = {}; filteredLedger().forEach(function (l) { ids[l.id] = 1; });
+    var n = Object.keys(ids).length; S.ledger = S.ledger.filter(function (l) { return !ids[l.id]; }); ledLim = 100; save(); banner(n + ' transaksi dihapus.'); setTimeout(function () { banner(''); }, 4000);
+  });
+  armed($('#led-del-all'), 'Kosongkan semua', function () {
+    var n = S.ledger.length; S.ledger = []; ledLim = 100; save(); banner('Semua ' + n + ' transaksi dihapus. Master Corporate tetap ada.'); setTimeout(function () { banner(''); }, 4000);
+  });
+
   // ---- upload Excel
   var imp = { buf: null, name: '', result: null };
   var serialIso = function (s) { return new Date(Math.round((s - 25569) * 864e5)).toISOString().slice(0, 10); };
